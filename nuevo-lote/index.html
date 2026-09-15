@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Peptora — Nuevo Lote</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0C0C;--surface:#14191A;--line:#262D2E;--ink:#ECEDEA;--ink-soft:#9CA8A8;--muted:#5E6B6C;
+    --teal:#4FD7C4;--teal-soft:rgba(79,215,196,.10);--amber:#D9A24B;--brick:#E06A52;--brick-soft:rgba(224,106,82,.12);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Space Grotesk',sans-serif;-webkit-font-smoothing:antialiased;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  .wrap{max-width:680px;margin:0 auto;padding:36px 20px 80px;}
+  header{margin-bottom:26px;}
+  header .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--teal);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;}
+  header h1{font-size:22px;font-weight:600;margin:0;}
+  header p{font-size:13px;color:var(--ink-soft);margin:6px 0 0;}
+
+  .token-bar{
+    display:none;background:var(--surface);border:1px solid var(--amber);padding:14px 16px;margin-bottom:22px;
+    align-items:center;gap:10px;
+  }
+  .token-bar.show{display:flex;}
+  .token-bar input{flex:1;background:var(--bg);border:1px solid var(--line);color:var(--ink);padding:9px 10px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;}
+  .token-bar button{background:var(--teal);color:#04100E;border:none;padding:9px 16px;font-weight:600;font-size:12.5px;cursor:pointer;}
+
+  .card{background:var(--surface);border:1px solid var(--line);padding:22px;margin-bottom:16px;}
+  .card h2{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;margin:0 0 16px;}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+  .field{display:flex;flex-direction:column;gap:5px;}
+  .field.full{grid-column:1/-1;}
+  label{font-size:11px;color:var(--ink-soft);}
+  input,select{
+    background:var(--bg);border:1px solid var(--line);color:var(--ink);padding:10px 11px;
+    font-family:'IBM Plex Mono',monospace;font-size:13px;
+  }
+  input:focus,select:focus{outline:none;border-color:var(--teal);}
+  .hint{font-size:10.5px;color:var(--muted);margin-top:2px;}
+  .computed{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--teal);font-weight:600;}
+
+  .new-inline{display:none;margin-top:8px;gap:8px;}
+  .new-inline.show{display:flex;}
+  .new-inline input{flex:1;}
+  .link-btn{background:none;border:none;color:var(--teal);font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;padding:0;text-align:left;margin-top:4px;}
+
+  .submit-bar{display:flex;gap:10px;align-items:center;}
+  .btn{background:var(--teal);color:#04100E;border:none;padding:13px 22px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;cursor:pointer;}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+  .status{font-family:'IBM Plex Mono',monospace;font-size:12px;}
+  .status.ok{color:var(--teal);}
+  .status.err{color:var(--brick);}
+
+  .back{display:inline-block;margin-bottom:18px;color:var(--ink-soft);text-decoration:none;font-size:12.5px;font-family:'IBM Plex Mono',monospace;}
+  .back:hover{color:var(--ink);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a href="../" class="back">← dashboard</a>
+  <header>
+    <div class="eyebrow">Peptora · captura directa</div>
+    <h1>Alta de lote</h1>
+    <p>Escribe directo a <span class="mono">data/lotes.json</span> vía GitHub API. Sin pasar por admin.</p>
+  </header>
+
+  <div class="token-bar" id="tokenBar">
+    <input type="password" id="tokenInput" placeholder="Pega tu GitHub token (se guarda solo en este navegador)">
+    <button onclick="guardarToken()">Guardar</button>
+  </div>
+
+  <div class="card">
+    <h2>Producto</h2>
+    <div class="row">
+      <div class="field">
+        <label>Producto</label>
+        <select id="productoSelect" onchange="onProductoChange()">
+          <option value="">Cargando…</option>
+        </select>
+        <button class="link-btn" onclick="toggleNuevoProducto()">+ Producto nuevo</button>
+        <div class="new-inline" id="nuevoProductoBox">
+          <input id="nuevoProductoNombre" placeholder="Nombre del producto">
+          <input id="nuevoProductoCategoria" placeholder="Categoría (ej. Péptidos)">
+        </div>
+      </div>
+      <div class="field">
+        <label>Concentración (mg)</label>
+        <input id="concentracion" type="number" step="0.01" placeholder="5">
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Proveedor</label>
+        <select id="proveedorSelect" onchange="onProveedorChange()">
+          <option value="">Cargando…</option>
+        </select>
+        <button class="link-btn" onclick="toggleNuevoProveedor()">+ Proveedor nuevo</button>
+        <div class="new-inline" id="nuevoProveedorBox">
+          <input id="nuevoProveedorNombre" placeholder="Nombre del proveedor">
+        </div>
+      </div>
+      <div class="field">
+        <label>Código de lote</label>
+        <input id="loteCodigo" placeholder="L-2409A">
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Fecha de adquisición</label>
+        <input id="fechaAdquisicion" type="date">
+      </div>
+      <div class="field">
+        <label>Fecha de caducidad</label>
+        <input id="fechaCaducidad" type="date">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Costos y precios</h2>
+    <div class="row">
+      <div class="field">
+        <label>Viales por caja</label>
+        <input id="vialesPorCaja" type="number" placeholder="10" oninput="recalcular()">
+      </div>
+      <div class="field">
+        <label>Cajas iniciales en stock</label>
+        <input id="stockCajas" type="number" placeholder="10">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Costo de compra por caja</label>
+        <input id="costoCaja" type="number" step="0.01" placeholder="1180.00" oninput="recalcular()">
+      </div>
+      <div class="field">
+        <label>Descuento al adquirir (%)</label>
+        <input id="descuento" type="number" step="0.01" placeholder="12" oninput="recalcular()">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Costo neto por caja</label>
+        <div class="computed" id="costoNeto">$ 0.00</div>
+      </div>
+      <div class="field">
+        <label>Costo por vial</label>
+        <div class="computed" id="costoVial">$ 0.00</div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Precio de venta por caja</label>
+        <input id="precioCaja" type="number" step="0.01" placeholder="1950.00" oninput="recalcular()">
+      </div>
+      <div class="field">
+        <label>Precio de venta por vial</label>
+        <input id="precioVial" type="number" step="0.01" placeholder="210.00" oninput="recalcular()">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Margen (caja)</label>
+        <div class="computed" id="margenCaja">—</div>
+      </div>
+      <div class="field">
+        <label>Margen (vial)</label>
+        <div class="computed" id="margenVial">—</div>
+      </div>
+    </div>
+    <div class="field full">
+      <label>Imagen del producto (URL, opcional)</label>
+      <input id="imagenUrl" placeholder="https://...">
+    </div>
+  </div>
+
+  <div class="submit-bar">
+    <button class="btn" id="submitBtn" onclick="guardarLote()">Guardar lote</button>
+    <span class="status" id="statusMsg"></span>
+  </div>
+</div>
+
+<script>
+const REPO = 'peptoramx/Peptora';
+const API = `https://api.github.com/repos/${REPO}/contents`;
+
+let productos = [];
+let proveedores = [];
+let lotes = [];
+let shaCache = {}; // path -> sha
+
+function getToken(){ return localStorage.getItem('peptora_token'); }
+function guardarToken(){
+  const t = document.getElementById('tokenInput').value.trim();
+  if(!t){ return; }
+  localStorage.setItem('peptora_token', t);
+  document.getElementById('tokenBar').classList.remove('show');
+  cargarDatos();
+}
+function ensureToken(){
+  if(!getToken()){
+    document.getElementById('tokenBar').classList.add('show');
+    return false;
+  }
+  return true;
+}
+
+async function ghGet(path){
+  const res = await fetch(`${API}/${path}`, {
+    headers: { 'Authorization': `Bearer ${getToken()}`, 'Accept':'application/vnd.github+json' }
+  });
+  if(!res.ok) throw new Error(`GET ${path} -> ${res.status}`);
+  const json = await res.json();
+  shaCache[path] = json.sha;
+  const content = decodeURIComponent(escape(atob(json.content)));
+  return JSON.parse(content || '[]');
+}
+
+async function ghPut(path, dataArr, msg){
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(dataArr, null, 2))));
+  const body = { message: msg, content, branch: 'main' };
+  if(shaCache[path]) body.sha = shaCache[path];
+  const res = await fetch(`${API}/${path}`, {
+    method: 'PUT',
+    headers: { 'Authorization': `Bearer ${getToken()}`, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json' },
+    body: JSON.stringify(body)
+  });
+  if(!res.ok){
+    const err = await res.text();
+    throw new Error(`PUT ${path} -> ${res.status}: ${err}`);
+  }
+  const json = await res.json();
+  shaCache[path] = json.content.sha;
+}
+
+async function cargarDatos(){
+  if(!ensureToken()) return;
+  try{
+    [productos, proveedores, lotes] = await Promise.all([
+      ghGet('data/productos.json'),
+      ghGet('data/proveedores.json'),
+      ghGet('data/lotes.json')
+    ]);
+    renderSelects();
+  }catch(e){
+    setStatus('Error cargando datos: ' + e.message, true);
+  }
+}
+
+function renderSelects(){
+  const pSel = document.getElementById('productoSelect');
+  pSel.innerHTML = '<option value="">— seleccionar —</option>' +
+    productos.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+
+  const vSel = document.getElementById('proveedorSelect');
+  vSel.innerHTML = '<option value="">— seleccionar —</option>' +
+    proveedores.map(v => `<option value="${v.id}">${v.nombre}</option>`).join('');
+}
+
+function toggleNuevoProducto(){
+  document.getElementById('nuevoProductoBox').classList.toggle('show');
+  document.getElementById('productoSelect').value = '';
+}
+function toggleNuevoProveedor(){
+  document.getElementById('nuevoProveedorBox').classList.toggle('show');
+  document.getElementById('proveedorSelect').value = '';
+}
+function onProductoChange(){ if(document.getElementById('productoSelect').value) document.getElementById('nuevoProductoBox').classList.remove('show'); }
+function onProveedorChange(){ if(document.getElementById('proveedorSelect').value) document.getElementById('nuevoProveedorBox').classList.remove('show'); }
+
+function num(id){ return parseFloat(document.getElementById(id).value) || 0; }
+
+function recalcular(){
+  const costoCaja = num('costoCaja');
+  const descuento = num('descuento');
+  const viales = num('vialesPorCaja');
+  const precioCaja = num('precioCaja');
+  const precioVial = num('precioVial');
+
+  const costoNeto = costoCaja * (1 - descuento/100);
+  const costoVial = viales > 0 ? costoNeto / viales : 0;
+
+  document.getElementById('costoNeto').textContent = '$ ' + costoNeto.toFixed(2);
+  document.getElementById('costoVial').textContent = '$ ' + costoVial.toFixed(2);
+
+  const margenCaja = precioCaja > 0 ? ((precioCaja - costoNeto) / precioCaja * 100) : null;
+  const margenVial = precioVial > 0 && costoVial > 0 ? ((precioVial - costoVial) / precioVial * 100) : null;
+
+  document.getElementById('margenCaja').textContent = margenCaja !== null ? margenCaja.toFixed(1) + '%' : '—';
+  document.getElementById('margenVial').textContent = margenVial !== null ? margenVial.toFixed(1) + '%' : '—';
+}
+
+function slugify(s){
+  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+}
+
+function buscarPorNombre(lista, nombre){
+  const n = nombre.trim().toLowerCase();
+  return lista.find(x => x.nombre.trim().toLowerCase() === n);
+}
+
+function setStatus(msg, isErr){
+  const el = document.getElementById('statusMsg');
+  el.textContent = msg;
+  el.className = 'status ' + (isErr ? 'err' : 'ok');
+}
+
+async function guardarLote(){
+  if(!ensureToken()) return;
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  setStatus('Guardando…', false);
+
+  try{
+    // Producto: existente o nuevo (con detección de duplicado por nombre)
+    let productoId = document.getElementById('productoSelect').value;
+    let productoNombre;
+    if(!productoId){
+      const nombreNuevo = document.getElementById('nuevoProductoNombre').value.trim();
+      if(!nombreNuevo) throw new Error('Falta nombre de producto');
+      const existente = buscarPorNombre(productos, nombreNuevo);
+      if(existente){
+        productoId = existente.id;
+        productoNombre = existente.nombre;
+      } else {
+        productoId = 'prod_' + slugify(nombreNuevo);
+        productoNombre = nombreNuevo;
+        productos.push({ id: productoId, nombre: productoNombre, categoria: document.getElementById('nuevoProductoCategoria').value.trim() || 'Sin categoría' });
+        await ghPut('data/productos.json', productos, `Alta producto: ${productoNombre}`);
+      }
+    } else {
+      productoNombre = productos.find(p => p.id === productoId).nombre;
+    }
+
+    // Proveedor: existente o nuevo
+    let proveedorId = document.getElementById('proveedorSelect').value;
+    let proveedorNombre;
+    if(!proveedorId){
+      const nombreNuevo = document.getElementById('nuevoProveedorNombre').value.trim();
+      if(!nombreNuevo) throw new Error('Falta nombre de proveedor');
+      const existente = buscarPorNombre(proveedores, nombreNuevo);
+      if(existente){
+        proveedorId = existente.id;
+        proveedorNombre = existente.nombre;
+      } else {
+        proveedorId = 'prov_' + slugify(nombreNuevo);
+        proveedorNombre = nombreNuevo;
+        proveedores.push({ id: proveedorId, nombre: proveedorNombre });
+        await ghPut('data/proveedores.json', proveedores, `Alta proveedor: ${proveedorNombre}`);
+      }
+    } else {
+      proveedorNombre = proveedores.find(v => v.id === proveedorId).nombre;
+    }
+
+    const costoCaja = num('costoCaja');
+    const descuento = num('descuento');
+    const viales = num('vialesPorCaja');
+    const costoNeto = costoCaja * (1 - descuento/100);
+    const costoVial = viales > 0 ? costoNeto / viales : 0;
+
+    const nuevoLote = {
+      id: 'lote_' + Date.now(),
+      producto_id: productoId,
+      producto_nombre: productoNombre,
+      proveedor_id: proveedorId,
+      proveedor_nombre: proveedorNombre,
+      concentracion_mg: num('concentracion'),
+      lote: document.getElementById('loteCodigo').value.trim(),
+      fecha_adquisicion: document.getElementById('fechaAdquisicion').value,
+      fecha_caducidad: document.getElementById('fechaCaducidad').value,
+      costo_compra_caja: costoCaja,
+      descuento_pct: descuento,
+      costo_neto_caja: Math.round(costoNeto * 100) / 100,
+      viales_por_caja: viales,
+      costo_por_vial: Math.round(costoVial * 100) / 100,
+      precio_venta_caja: num('precioCaja'),
+      precio_venta_vial: num('precioVial'),
+      stock_cajas: num('stockCajas'),
+      stock_viales: 0,
+      imagen_url: document.getElementById('imagenUrl').value.trim()
+    };
+
+    lotes.push(nuevoLote);
+    await ghPut('data/lotes.json', lotes, `Alta lote: ${productoNombre} ${nuevoLote.lote}`);
+
+    setStatus('✓ Lote guardado — ' + productoNombre + ' ' + nuevoLote.lote, false);
+    document.querySelectorAll('input').forEach(i => i.value = '');
+    recalcular();
+    renderSelects();
+  }catch(e){
+    setStatus('Error: ' + e.message, true);
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+// init
+if(ensureToken()){ cargarDatos(); }
+</script>
+</body>
+</html>
