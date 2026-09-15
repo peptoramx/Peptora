@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Peptora — Portal de venta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/theme.css?v=2">
+<link rel="icon" href="../favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/icon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="../assets/icons/icon-180.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#0EA99B">
+<style>
+  .vend-header{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 20px;margin-bottom:20px;box-shadow:var(--shadow-1);}
+  .vend-header .n{font-size:16px;font-weight:700;}
+  .vend-header .l{font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-top:2px;}
+  .blocked{background:var(--brick-tint);color:var(--brick);border-radius:var(--radius);padding:16px 20px;font-size:13px;}
+</style>
+</head>
+<body>
+<div class="form-wrap">
+  <header>
+    <div class="eyebrow">Peptora · portal de vendedor</div>
+    <h1>Registrar venta</h1>
+    <p>Descuenta stock automáticamente al confirmar.</p>
+  </header>
+
+  <div id="vendHeader"></div>
+  <div class="token-bar" id="tokenBar">
+    <input type="password" id="tokenInput" placeholder="Pega tu token de acceso">
+    <button onclick="guardarToken()">Guardar</button>
+  </div>
+
+  <div id="formArea"></div>
+</div>
+
+<script src="../js/datos.js"></script>
+<script>
+const REPO = 'peptoramx/Peptora';
+const API = `https://api.github.com/repos/${REPO}/contents`;
+const params = new URLSearchParams(location.search);
+const vendedorId = params.get('v');
+
+let vendedor = null, lotes = [], shaCache = {}, tipoVenta = 'vial', precioEditadoManualmente = false;
+
+function tokenKey(){ return 'peptora_token_v_' + vendedorId; }
+function getToken(){ return localStorage.getItem(tokenKey()); }
+function guardarToken(){
+  const t = document.getElementById('tokenInput').value.trim();
+  if(!t) return;
+  localStorage.setItem(tokenKey(), t);
+  document.getElementById('tokenBar').classList.remove('show');
+  init();
+}
+function ensureToken(){
+  if(!getToken()){ document.getElementById('tokenBar').classList.add('show'); return false; }
+  return true;
+}
+async function ghGetRaw(path){
+  const res = await fetch(`${API}/${path}`, { headers:{ 'Authorization':`Bearer ${getToken()}`, 'Accept':'application/vnd.github+json' } });
+  if(!res.ok) throw new Error(`GET ${path} -> ${res.status}`);
+  const json = await res.json();
+  shaCache[path] = json.sha;
+  return JSON.parse(decodeURIComponent(escape(atob(json.content))) || '[]');
+}
+async function ghPut(path, dataArr, msg){
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(dataArr, null, 2))));
+  const body = { message: msg, content, branch:'main' };
+  if(shaCache[path]) body.sha = shaCache[path];
+  const res = await fetch(`${API}/${path}`, {
+    method:'PUT',
+    headers:{ 'Authorization':`Bearer ${getToken()}`, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json' },
+    body: JSON.stringify(body)
+  });
+  if(!res.ok) throw new Error(`PUT ${path} -> ${res.status}: ${await res.text()}`);
+  const json = await res.json();
+  shaCache[path] = json.content.sha;
+}
+
+function bloquear(msg){
+  document.getElementById('vendHeader').innerHTML = `<div class="blocked">${msg}</div>`;
+  document.getElementById('formArea').innerHTML = '';
+  document.getElementById('tokenBar').classList.remove('show');
+}
+
+async function init(){
+  if(!vendedorId){ bloquear('Link inválido — falta el identificador de vendedor (?v=...).'); return; }
+  if(!ensureToken()) return;
+  try{
+    const vendedores = await ghGetRaw('data/vendedores.json');
+    vendedor = vendedores.find(v => v.id === vendedorId);
+    if(!vendedor){ bloquear('Vendedor no encontrado.'); return; }
+    if(!vendedor.activo){ bloquear(`${vendedor.nombre}: cuenta desactivada. Contacta al administrador.`); return; }
+
+    document.getElementById('vendHeader').innerHTML = `
+      <div class="vend-header"><div class="n">${vendedor.nombre}</div><div class="l">${vendedor.ubicacion||''}</div></div>`;
+
+    lotes = await ghGetRaw('data/lotes.json');
+    renderForm();
+  }catch(e){
+    bloquear('Error de acceso — verifica tu token. (' + e.message + ')');
+  }
+}
+
+function renderForm(){
+  document.getElementById('formArea').innerHTML = `
+    <div class="card">
+      <div class="field">
+        <label>Producto</label>
+        <select id="loteSelect" onchange="onLoteChange()"><option value="">— seleccionar —</option></select>
+        <div class="stock-info" id="stockInfo"></div>
+      </div>
+      <div class="field">
+        <label>Tipo de venta</label>
+        <div class="tipo-toggle">
+          <button type="button" id="btnCaja" onclick="setTipo('caja')">Por caja</button>
+          <button type="button" id="btnVial" class="active" onclick="setTipo('vial')">Por vial</button>
+        </div>
+      </div>
+      <div class="field"><label>Cantidad</label><input id="cantidad" type="number" min="1" value="1" oninput="recalcularResumen()"></div>
+      <div class="check-row"><input type="checkbox" id="conDescuento" onchange="onDescuentoToggle()"><label for="conDescuento">Venta con descuento</label></div>
+      <div class="field" id="descuentoField" style="display:none;"><label>Descuento (%)</label><input id="descuentoPct" type="number" step="0.01" value="0" oninput="recalcularResumen()"></div>
+      <div class="field"><label>Precio final vendido</label><input id="precioVendido" type="number" step="0.01" oninput="precioEditadoManualmente=true"></div>
+      <div class="resumen" id="resumen"></div>
+      <button class="btn" id="submitBtn" onclick="registrarVenta()" style="width:100%;">Registrar venta</button>
+      <span class="status" id="statusMsg"></span>
+    </div>`;
+  const sel = document.getElementById('loteSelect');
+  const disponibles = lotes.filter(l => stockEnViales(l) > 0);
+  sel.innerHTML = '<option value="">— seleccionar —</option>' +
+    disponibles.map(l => `<option value="${l.id}">${l.producto_nombre}${l.concentracion_mg?' '+l.concentracion_mg+'mg':''}</option>`).join('');
+}
+
+function loteActual(){ return lotes.find(l => l.id === document.getElementById('loteSelect').value); }
+function setTipo(t){
+  tipoVenta = t;
+  document.getElementById('btnCaja').classList.toggle('active', t==='caja');
+  document.getElementById('btnVial').classList.toggle('active', t==='vial');
+  precioEditadoManualmente = false;
+  recalcularResumen();
+}
+function onLoteChange(){
+  const l = loteActual();
+  const info = document.getElementById('stockInfo');
+  if(!l){ info.textContent=''; return; }
+  info.textContent = `Disponible: ${stockEnViales(l)} unidades`;
+  info.className = 'stock-info' + (stockEnViales(l) < 5 ? ' warn' : '');
+  precioEditadoManualmente = false;
+  recalcularResumen();
+}
+function onDescuentoToggle(){
+  document.getElementById('descuentoField').style.display = document.getElementById('conDescuento').checked ? 'flex' : 'none';
+  if(!document.getElementById('conDescuento').checked) document.getElementById('descuentoPct').value = 0;
+  recalcularResumen();
+}
+function recalcularResumen(){
+  const l = loteActual();
+  const resumen = document.getElementById('resumen');
+  if(!l){ resumen.innerHTML=''; return; }
+  const cantidad = parseInt(document.getElementById('cantidad').value) || 0;
+  const precioUnit = tipoVenta === 'caja' ? l.precio_venta_caja : l.precio_venta_vial;
+  const descuentoPct = parseFloat(document.getElementById('descuentoPct').value) || 0;
+  const subtotal = precioUnit * cantidad;
+  const total = subtotal * (1 - descuentoPct/100);
+  if(!precioEditadoManualmente) document.getElementById('precioVendido').value = total.toFixed(2);
+  resumen.innerHTML = `
+    <div class="row"><span>Precio unitario</span><span>${formatMoneda(precioUnit)}</span></div>
+    <div class="row"><span>Cantidad</span><span>${cantidad}</span></div>
+    ${descuentoPct>0?`<div class="row"><span>Descuento (${descuentoPct}%)</span><span>-${formatMoneda(subtotal*descuentoPct/100)}</span></div>`:''}
+    <div class="row total"><span>Total</span><span>${formatMoneda(parseFloat(document.getElementById('precioVendido').value)||0)}</span></div>`;
+}
+function setStatus(msg, isErr){
+  const el = document.getElementById('statusMsg'); el.textContent = msg; el.className = 'status ' + (isErr?'err':'ok');
+}
+
+async function registrarVenta(){
+  const l = loteActual();
+  if(!l){ setStatus('Selecciona un producto', true); return; }
+  const cantidad = parseInt(document.getElementById('cantidad').value) || 0;
+  if(cantidad <= 0){ setStatus('Cantidad inválida', true); return; }
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; setStatus('Registrando…', false);
+  try{
+    if(tipoVenta === 'caja') venderCaja(l, cantidad); else venderVial(l, cantidad);
+    await ghPut('data/lotes.json', lotes, `Venta (${vendedor.nombre}): -${cantidad} ${tipoVenta} de ${l.producto_nombre}`);
+
+    const conDescuento = document.getElementById('conDescuento').checked;
+    const nuevaVenta = {
+      id: 'venta_' + Date.now(),
+      lote_id: l.id,
+      producto_nombre: l.producto_nombre,
+      fecha: new Date().toISOString(),
+      tipo_venta: tipoVenta,
+      cantidad,
+      precio_vendido: parseFloat(document.getElementById('precioVendido').value) || 0,
+      con_descuento: conDescuento,
+      descuento_pct: conDescuento ? (parseFloat(document.getElementById('descuentoPct').value)||0) : 0,
+      vendedor_id: vendedor.id,
+      vendedor_nombre: vendedor.nombre,
+    };
+    let ventas; try{ ventas = await ghGetRaw('data/ventas.json'); }catch(e){ ventas = []; }
+    ventas.push(nuevaVenta);
+    await ghPut('data/ventas.json', ventas, `Venta registrada por ${vendedor.nombre}`);
+
+    setStatus(`✓ Venta registrada — ${formatMoneda(nuevaVenta.precio_vendido)}`, false);
+    document.getElementById('cantidad').value = 1;
+    document.getElementById('conDescuento').checked = false;
+    onDescuentoToggle();
+    renderForm();
+  }catch(e){ setStatus('Error: ' + e.message, true); }
+  finally{ btn.disabled = false; }
+}
+
+init();
+</script>
+</body>
+</html>
