@@ -4,11 +4,15 @@
 const RUTA_DATOS = (window.RUTA_DATOS_BASE || '') + 'data/';
 
 async function cargarTodo(){
+  // cache:'no-store' + parametro de version -> evita que el CDN de GitHub Pages
+  // o el navegador sirvan data/*.json desactualizado justo despues de una venta/alta.
+  const cacheBuster = '?t=' + Date.now();
+  const opts = { cache: 'no-store' };
   const [productos, proveedores, lotes, ventas] = await Promise.all([
-    fetch(RUTA_DATOS + 'productos.json').then(r => r.json()),
-    fetch(RUTA_DATOS + 'proveedores.json').then(r => r.json()),
-    fetch(RUTA_DATOS + 'lotes.json').then(r => r.json()),
-    fetch(RUTA_DATOS + 'ventas.json').then(r => r.json()),
+    fetch(RUTA_DATOS + 'productos.json' + cacheBuster, opts).then(r => r.json()),
+    fetch(RUTA_DATOS + 'proveedores.json' + cacheBuster, opts).then(r => r.json()),
+    fetch(RUTA_DATOS + 'lotes.json' + cacheBuster, opts).then(r => r.json()),
+    fetch(RUTA_DATOS + 'ventas.json' + cacheBuster, opts).then(r => r.json()),
   ]);
   return { productos, proveedores, lotes, ventas };
 }
