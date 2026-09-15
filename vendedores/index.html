@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Peptora — Vendedores</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/theme.css?v=2">
+<link rel="icon" href="../favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/icon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="../assets/icons/icon-180.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#0EA99B">
+<style>
+  .vend-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin-bottom:12px;box-shadow:var(--shadow-1);}
+  .vend-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;}
+  .vend-name{font-size:15px;font-weight:700;color:var(--ink);}
+  .vend-meta{font-size:11.5px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;margin-top:3px;}
+  .vend-stats{display:flex;gap:22px;margin-top:14px;flex-wrap:wrap;}
+  .vend-stat .l{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;}
+  .vend-stat .v{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;color:var(--ink);}
+  .vend-stat .v.teal{color:var(--teal-deep);}
+  .vend-actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;}
+  .toggle-badge{cursor:pointer;border:none;}
+  .link-box{display:flex;gap:8px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-sm);padding:8px 10px;margin-top:10px;}
+  .link-box input{border:none;background:none;font-size:11.5px;padding:0;}
+  .copy-btn{background:var(--teal-tint);color:var(--teal-deep);border:none;border-radius:var(--radius-sm);padding:6px 10px;font-size:11px;font-weight:600;cursor:pointer;flex-shrink:0;}
+</style>
+</head>
+<body>
+<div class="form-wrap" style="max-width:820px;">
+  <a href="../" class="back">← dashboard</a>
+  <header>
+    <div class="eyebrow">Peptora · vendedores externos</div>
+    <h1>Vendedores</h1>
+    <p>Alta de vendedores, su portal de venta propio y comisiones acumuladas.</p>
+  </header>
+
+  <div class="token-bar" id="tokenBar">
+    <input type="password" id="tokenInput" placeholder="Pega tu GitHub token (se guarda solo en este navegador)">
+    <button onclick="guardarToken()">Guardar</button>
+  </div>
+
+  <div class="card">
+    <h2>Alta de vendedor</h2>
+    <div class="row">
+      <div class="field"><label>Nombre completo</label><input id="nombre" placeholder="Camila Rodríguez"></div>
+      <div class="field"><label>Comisión (%)</label><input id="comisionPct" type="number" step="0.1" placeholder="15"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Teléfono</label><input id="telefono" placeholder="662 123 4567"></div>
+      <div class="field"><label>Email</label><input id="email" placeholder="camila@correo.com"></div>
+    </div>
+    <div class="row">
+      <div class="field full"><label>Ubicación / zona</label><input id="ubicacion" placeholder="Hermosillo, Sonora"></div>
+    </div>
+    <div class="row">
+      <div class="field full"><label>Notas</label><input id="notas" placeholder="Opcional"></div>
+    </div>
+    <button class="btn" id="submitBtn" onclick="guardarVendedor()">Dar de alta</button>
+    <span class="status" id="statusMsg"></span>
+  </div>
+
+  <div class="section-label"><div class="t">Vendedores activos</div><div class="rule"></div></div>
+  <div id="listaVendedores"></div>
+</div>
+
+<script src="../js/datos.js"></script>
+<script>
+const REPO = 'peptoramx/Peptora';
+const API = `https://api.github.com/repos/${REPO}/contents`;
+let vendedores = [], ventas = [], lotes = [];
+let shaCache = {};
+
+function getToken(){ return localStorage.getItem('peptora_token'); }
+function guardarToken(){
+  const t = document.getElementById('tokenInput').value.trim();
+  if(!t) return;
+  localStorage.setItem('peptora_token', t);
+  document.getElementById('tokenBar').classList.remove('show');
+  init();
+}
+function ensureToken(){
+  if(!getToken()){ document.getElementById('tokenBar').classList.add('show'); return false; }
+  return true;
+}
+async function ghGetRaw(path){
+  const res = await fetch(`${API}/${path}`, { headers:{ 'Authorization':`Bearer ${getToken()}`, 'Accept':'application/vnd.github+json' } });
+  if(!res.ok) throw new Error(`GET ${path} -> ${res.status}`);
+  const json = await res.json();
+  shaCache[path] = json.sha;
+  return JSON.parse(decodeURIComponent(escape(atob(json.content))) || '[]');
+}
+async function ghPut(path, dataArr, msg){
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(dataArr, null, 2))));
+  const body = { message: msg, content, branch:'main' };
+  if(shaCache[path]) body.sha = shaCache[path];
+  const res = await fetch(`${API}/${path}`, {
+    method:'PUT',
+    headers:{ 'Authorization':`Bearer ${getToken()}`, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json' },
+    body: JSON.stringify(body)
+  });
+  if(!res.ok) throw new Error(`PUT ${path} -> ${res.status}: ${await res.text()}`);
+  const json = await res.json();
+  shaCache[path] = json.content.sha;
+}
+function setStatus(msg, isErr){
+  const el = document.getElementById('statusMsg');
+  el.textContent = msg; el.className = 'status ' + (isErr?'err':'ok');
+}
+function slugify(s){
+  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+}
+
+async function init(){
+  if(!ensureToken()) return;
+  try{
+    [vendedores, ventas, lotes] = await Promise.all([
+      ghGetRaw('data/vendedores.json'),
+      ghGetRaw('data/ventas.json'),
+      ghGetRaw('data/lotes.json'),
+    ]);
+    renderLista();
+  }catch(e){ setStatus('Error cargando datos: ' + e.message, true); }
+}
+
+function renderLista(){
+  const el = document.getElementById('listaVendedores');
+  if(!vendedores.length){ el.innerHTML = '<div class="empty">Sin vendedores todavía.</div>'; return; }
+  const origin = location.origin + location.pathname.replace('vendedores/', '');
+  el.innerHTML = vendedores.map(v => {
+    const stats = comisionVendedor(ventas, v);
+    const link = `${origin}venta-vendedor/?v=${v.id}`;
+    return `
+    <div class="vend-card">
+      <div class="vend-top">
+        <div>
+          <div class="vend-name">${v.nombre}</div>
+          <div class="vend-meta">${v.ubicacion||'—'} · ${v.telefono||'sin tel'} · ${v.email||'sin email'}</div>
+        </div>
+        <span class="badge ${v.activo?'teal':'brick'} toggle-badge" onclick="toggleActivo('${v.id}')">${v.activo?'Activo':'Inactivo'}</span>
+      </div>
+      <div class="vend-stats">
+        <div class="vend-stat"><div class="l">Comisión</div><div class="v">${v.comision_pct}%</div></div>
+        <div class="vend-stat"><div class="l">Ventas registradas</div><div class="v">${stats.numVentas}</div></div>
+        <div class="vend-stat"><div class="l">Total vendido</div><div class="v">${formatMoneda(stats.totalVendido)}</div></div>
+        <div class="vend-stat"><div class="l">Comisión acumulada</div><div class="v teal">${formatMoneda(stats.comision)}</div></div>
+      </div>
+      ${v.notas ? `<div class="hint" style="margin-top:8px;">${v.notas}</div>` : ''}
+      <div class="link-box">
+        <input readonly value="${link}" onclick="this.select()">
+        <button class="copy-btn" onclick="copiarLink('${link}', this)">Copiar link</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function copiarLink(link, btn){
+  navigator.clipboard.writeText(link).then(()=>{
+    const orig = btn.textContent; btn.textContent = '✓ Copiado';
+    setTimeout(()=>btn.textContent = orig, 1500);
+  });
+}
+
+async function toggleActivo(id){
+  const v = vendedores.find(x => x.id === id);
+  v.activo = !v.activo;
+  try{
+    await ghPut('data/vendedores.json', vendedores, `${v.activo?'Reactivar':'Desactivar'} vendedor: ${v.nombre}`);
+    renderLista();
+  }catch(e){ setStatus('Error: ' + e.message, true); }
+}
+
+async function guardarVendedor(){
+  if(!ensureToken()) return;
+  const nombre = document.getElementById('nombre').value.trim();
+  if(!nombre){ setStatus('Falta el nombre', true); return; }
+  const existente = vendedores.find(v => v.nombre.trim().toLowerCase() === nombre.toLowerCase());
+  if(existente){ setStatus('Ya existe un vendedor con ese nombre: ' + existente.nombre, true); return; }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; setStatus('Guardando…', false);
+  try{
+    const nuevo = {
+      id: 'vend_' + slugify(nombre),
+      nombre,
+      telefono: document.getElementById('telefono').value.trim(),
+      email: document.getElementById('email').value.trim(),
+      ubicacion: document.getElementById('ubicacion').value.trim(),
+      comision_pct: parseFloat(document.getElementById('comisionPct').value) || 0,
+      activo: true,
+      fecha_alta: new Date().toISOString().slice(0,10),
+      notas: document.getElementById('notas').value.trim(),
+    };
+    vendedores.push(nuevo);
+    await ghPut('data/vendedores.json', vendedores, `Alta vendedor: ${nombre}`);
+    setStatus('✓ Vendedor dado de alta — copia su link de venta abajo', false);
+    document.querySelectorAll('.card input').forEach(i => i.value = '');
+    renderLista();
+  }catch(e){ setStatus('Error: ' + e.message, true); }
+  finally{ btn.disabled = false; }
+}
+
+if(ensureToken()) init();
+</script>
+</body>
+</html>
