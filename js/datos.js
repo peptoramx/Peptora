@@ -139,3 +139,14 @@ function ventasRecientes(ventas, lotes, n=5){
     .slice(0, n)
     .map(v => ({ ...v, lote: lotesPorId[v.lote_id] }));
 }
+
+function ventasDeVendedor(ventas, vendedorId){
+  return ventas.filter(v => v.vendedor_id === vendedorId);
+}
+
+function comisionVendedor(ventas, vendedor){
+  const propias = ventasDeVendedor(ventas, vendedor.id);
+  const totalVendido = propias.reduce((s,v) => s + (v.precio_vendido||0), 0);
+  const comision = totalVendido * (vendedor.comision_pct||0) / 100;
+  return { totalVendido, comision, numVentas: propias.length };
+}
