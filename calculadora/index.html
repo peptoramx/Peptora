@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Peptora — Calculadora de dosificación</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/theme.css?v=2">
+<link rel="icon" href="../favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/icon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="../assets/icons/icon-180.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#0EA99B">
+<style>
+  .unit-toggle{display:flex;gap:8px;}
+  .unit-toggle button{flex:1;padding:10px;background:var(--bg);border:1px solid var(--line-strong);border-radius:var(--radius-sm);color:var(--ink-soft);font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13px;cursor:pointer;}
+  .unit-toggle button.active{background:var(--teal);color:#fff;border-color:var(--teal);}
+  .jeringa-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .jeringa-opt{padding:12px 8px;background:var(--bg);border:1px solid var(--line-strong);border-radius:var(--radius-sm);text-align:center;cursor:pointer;}
+  .jeringa-opt.active{background:var(--teal-tint);border-color:var(--teal);}
+  .jeringa-opt .cap{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--ink);}
+  .jeringa-opt .u{font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+
+  .resultado{background:var(--surface);border:2px solid var(--teal);border-radius:var(--radius);padding:22px;text-align:center;margin-top:6px;}
+  .resultado .num{font-family:'IBM Plex Mono',monospace;font-size:40px;font-weight:700;color:var(--teal-deep);line-height:1;}
+  .resultado .lbl{font-size:12px;color:var(--ink-soft);margin-top:6px;font-weight:600;}
+  .resultado .sub{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);margin-top:10px;}
+
+  .warn-box{background:var(--brick-tint);color:var(--brick);border-radius:var(--radius-sm);padding:10px 14px;font-size:12.5px;margin-top:10px;font-weight:600;}
+
+  .jeringa-svg{width:100%;max-width:420px;margin:16px auto 4px;display:block;}
+  .stats-row{display:flex;justify-content:space-around;margin-top:16px;flex-wrap:wrap;gap:12px;}
+  .stat-mini .l{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;}
+  .stat-mini .v{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;color:var(--ink);margin-top:2px;}
+</style>
+</head>
+<body>
+<div class="form-wrap" style="max-width:640px;">
+  <a href="../" class="back">← dashboard</a>
+  <header>
+    <div class="eyebrow">Peptora · herramienta</div>
+    <h1>Calculadora de dosificación</h1>
+    <p>Reconstitución y unidades a cargar en jeringa. No requiere token — no escribe datos.</p>
+  </header>
+
+  <div class="card">
+    <h2>1. Producto y reconstitución</h2>
+    <div class="field" style="margin-bottom:14px;">
+      <label>Cargar desde inventario (opcional)</label>
+      <select id="loteSelect" onchange="onLoteSelect()"><option value="">— manual —</option></select>
+    </div>
+    <div class="row">
+      <div class="field"><label>Miligramos totales en el vial</label><input id="mgVial" type="number" step="0.01" placeholder="20" oninput="calcular()"></div>
+      <div class="field"><label>ML de agua bacteriostática usados</label><input id="mlAgua" type="number" step="0.01" placeholder="2" oninput="calcular()"></div>
+    </div>
+    <div class="hint" id="concInfo"></div>
+  </div>
+
+  <div class="card">
+    <h2>2. Dosis de aplicación deseada</h2>
+    <div class="row">
+      <div class="field">
+        <label>Cantidad</label>
+        <input id="doseValor" type="number" step="0.01" placeholder="250" oninput="calcular()">
+      </div>
+      <div class="field">
+        <label>Unidad</label>
+        <div class="unit-toggle">
+          <button type="button" id="btnMg" onclick="setUnidad('mg')">mg</button>
+          <button type="button" id="btnMcg" class="active" onclick="setUnidad('mcg')">mcg</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>3. Jeringa a usar</h2>
+    <div class="jeringa-grid">
+      <div class="jeringa-opt" data-cap="30" data-ml="0.3" onclick="setJeringa(this)"><div class="cap">0.3 ml</div><div class="u">30 unidades</div></div>
+      <div class="jeringa-opt" data-cap="50" data-ml="0.5" onclick="setJeringa(this)"><div class="cap">0.5 ml</div><div class="u">50 unidades</div></div>
+      <div class="jeringa-opt active" data-cap="100" data-ml="1" onclick="setJeringa(this)"><div class="cap">1 ml</div><div class="u">100 unidades</div></div>
+    </div>
+    <svg class="jeringa-svg" id="jeringaSvg" viewBox="0 0 420 90"></svg>
+  </div>
+
+  <div class="resultado" id="resultado">
+    <div class="lbl">Carga en jeringa</div>
+    <div class="num" id="resUnidades">—</div>
+    <div class="sub" id="resVolumen"></div>
+    <div id="warnBox"></div>
+    <div class="stats-row">
+      <div class="stat-mini"><div class="l">Concentración</div><div class="v" id="statConc">—</div></div>
+      <div class="stat-mini"><div class="l">Dosis por vial</div><div class="v" id="statDosis">—</div></div>
+      <div class="stat-mini"><div class="l">Costo por dosis</div><div class="v" id="statCosto">—</div></div>
+    </div>
+  </div>
+</div>
+
+<script src="../js/datos.js"></script>
+<script>
+let lotes = [];
+let unidad = 'mcg';
+let jeringaCap = 100, jeringaMl = 1;
+
+async function initLotes(){
+  try{
+    lotes = await fetch(RUTA_DATOS_BASE_CALC() + 'data/lotes.json', {cache:'no-store'}).then(r=>r.json());
+    const sel = document.getElementById('loteSelect');
+    const disponibles = lotes.filter(l => stockEnViales(l) > 0);
+    sel.innerHTML = '<option value="">— manual —</option>' +
+      disponibles.map(l => `<option value="${l.id}">${l.producto_nombre}${l.concentracion_mg?' '+l.concentracion_mg+'mg':''}${l.lote?' · '+l.lote:''}</option>`).join('');
+  }catch(e){ /* sin inventario disponible, modo manual sigue funcionando */ }
+}
+function RUTA_DATOS_BASE_CALC(){ return '../'; }
+
+function onLoteSelect(){
+  const id = document.getElementById('loteSelect').value;
+  if(!id) return;
+  const l = lotes.find(x => x.id === id);
+  if(!l) return;
+  if(l.concentracion_mg) document.getElementById('mgVial').value = l.concentracion_mg;
+  calcular();
+}
+
+function setUnidad(u){
+  unidad = u;
+  document.getElementById('btnMg').classList.toggle('active', u==='mg');
+  document.getElementById('btnMcg').classList.toggle('active', u==='mcg');
+  calcular();
+}
+function setJeringa(el){
+  document.querySelectorAll('.jeringa-opt').forEach(o=>o.classList.remove('active'));
+  el.classList.add('active');
+  jeringaCap = parseFloat(el.dataset.cap);
+  jeringaMl = parseFloat(el.dataset.ml);
+  calcular();
+}
+
+function loteSeleccionado(){
+  const id = document.getElementById('loteSelect').value;
+  return id ? lotes.find(x => x.id === id) : null;
+}
+
+function dibujarJeringa(unidades){
+  const w = 420, h = 90;
+  const barrelX = 30, barrelW = 340, barrelY = 30, barrelH = 30;
+  const pct = Math.max(0, Math.min(1, unidades / jeringaCap));
+  const fillW = barrelW * pct;
+  let ticks = '';
+  const nTicks = jeringaCap <= 30 ? 6 : (jeringaCap <= 50 ? 10 : 10);
+  for(let i=0;i<=nTicks;i++){
+    const x = barrelX + (barrelW/nTicks)*i;
+    ticks += `<line x1="${x}" y1="${barrelY}" x2="${x}" y2="${barrelY+barrelH}" stroke="var(--line-strong)" stroke-width="1"/>`;
+  }
+  document.getElementById('jeringaSvg').innerHTML = `
+    <rect x="${barrelX}" y="${barrelY}" width="${barrelW}" height="${barrelH}" fill="none" stroke="var(--ink-soft)" stroke-width="2" rx="3"/>
+    <rect x="${barrelX+1}" y="${barrelY+1}" width="${Math.max(0,fillW-2)}" height="${barrelH-2}" fill="var(--teal-tint-strong)" />
+    ${ticks}
+    <rect x="0" y="${barrelY+6}" width="${barrelX}" height="${barrelH-12}" fill="var(--ink-soft)"/>
+    <path d="M ${barrelX+barrelW} ${barrelY+4} h 16 v ${barrelH-8} h -16 Z" fill="var(--ink-soft)"/>
+    <path d="M ${barrelX+barrelW+16} ${barrelY+10} h 26 v ${barrelH-20} h -26 Z" fill="var(--silver)"/>
+  `;
+}
+
+function calcular(){
+  const mgVial = parseFloat(document.getElementById('mgVial').value) || 0;
+  const mlAgua = parseFloat(document.getElementById('mlAgua').value) || 0;
+  const doseValor = parseFloat(document.getElementById('doseValor').value) || 0;
+  const lote = loteSeleccionado();
+
+  if(mgVial <= 0 || mlAgua <= 0 || doseValor <= 0){
+    document.getElementById('resUnidades').textContent = '—';
+    document.getElementById('resVolumen').textContent = '';
+    document.getElementById('warnBox').innerHTML = '';
+    document.getElementById('concInfo').textContent = '';
+    document.getElementById('statConc').textContent = '—';
+    document.getElementById('statDosis').textContent = '—';
+    document.getElementById('statCosto').textContent = '—';
+    dibujarJeringa(0);
+    return;
+  }
+
+  const concMgMl = mgVial / mlAgua;
+  const doseMg = unidad === 'mcg' ? doseValor/1000 : doseValor;
+  const volumenMl = doseMg / concMgMl;
+  const unidades = volumenMl * 100;
+  const dosisPorVial = mgVial / doseMg;
+
+  document.getElementById('concInfo').textContent =
+    `Concentración: ${concMgMl.toFixed(2)} mg/ml (${(concMgMl*1000).toFixed(0)} mcg/ml)`;
+
+  document.getElementById('resUnidades').textContent = unidades.toFixed(1) + ' u';
+  document.getElementById('resVolumen').textContent = `= ${volumenMl.toFixed(3)} ml en jeringa de ${jeringaMl} ml`;
+
+  const warn = document.getElementById('warnBox');
+  if(unidades > jeringaCap){
+    warn.innerHTML = `<div class="warn-box">⚠ Excede la capacidad de esta jeringa (${jeringaCap}u). Usa una de mayor volumen o divide la dosis.</div>`;
+  } else {
+    warn.innerHTML = '';
+  }
+
+  document.getElementById('statConc').textContent = concMgMl.toFixed(2) + ' mg/ml';
+  document.getElementById('statDosis').textContent = dosisPorVial.toFixed(1) + ' dosis';
+  if(lote && lote.costo_por_vial){
+    const costoPorDosis = lote.costo_por_vial / dosisPorVial;
+    document.getElementById('statCosto').textContent = formatMoneda(costoPorDosis);
+  } else {
+    document.getElementById('statCosto').textContent = '—';
+  }
+
+  dibujarJeringa(unidades);
+}
+
+initLotes();
+dibujarJeringa(0);
+</script>
+</body>
+</html>
