@@ -1,1 +1,13 @@
-[]
+[
+  {
+    "id": "venta_1789500111037",
+    "lote_id": "lote_016",
+    "producto_nombre": "BPC-157 + TB-500",
+    "fecha": "2026-09-15T19:21:51.037Z",
+    "tipo_venta": "vial",
+    "cantidad": 12,
+    "precio_vendido": 6120,
+    "con_descuento": true,
+    "descuento_pct": 70
+  }
+]
