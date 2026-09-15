@@ -1,1 +1,72 @@
-[]
+[
+  {
+    "id": "prod_retatrutida",
+    "nombre": "Retatrutida",
+    "categoria": "Péptidos"
+  },
+  {
+    "id": "prod_terzipatida",
+    "nombre": "Terzipatida",
+    "categoria": "Péptidos"
+  },
+  {
+    "id": "prod_klow",
+    "nombre": "KLOW",
+    "categoria": "Péptidos"
+  },
+  {
+    "id": "prod_semax",
+    "nombre": "Semax",
+    "categoria": "Nootrópicos"
+  },
+  {
+    "id": "prod_ghk-cu",
+    "nombre": "GHK-CU",
+    "categoria": "Péptidos"
+  },
+  {
+    "id": "prod_bac-water-3ml",
+    "nombre": "Bac Water 3ml",
+    "categoria": "Insumos"
+  },
+  {
+    "id": "prod_mots-c",
+    "nombre": "Mots-C",
+    "categoria": "Péptidos"
+  },
+  {
+    "id": "prod_cjc-1295",
+    "nombre": "CJC-1295",
+    "categoria": "Péptidos"
+  },
+  {
+    "id": "prod_ipamoreline",
+    "nombre": "Ipamoreline",
+    "categoria": "Péptidos"
+  },
+  {
+    "id": "prod_nad",
+    "nombre": "NAD+",
+    "categoria": "NAD+ / Longevidad"
+  },
+  {
+    "id": "prod_bac-water-10ml",
+    "nombre": "Bac Water 10ml",
+    "categoria": "Insumos"
+  },
+  {
+    "id": "prod_tesamorelin-ipamoreline",
+    "nombre": "Tesamorelin + Ipamoreline",
+    "categoria": "Péptidos"
+  },
+  {
+    "id": "prod_selank",
+    "nombre": "Selank",
+    "categoria": "Nootrópicos"
+  },
+  {
+    "id": "prod_bpc-157-tb-500",
+    "nombre": "BPC-157 + TB-500",
+    "categoria": "Péptidos"
+  }
+]
