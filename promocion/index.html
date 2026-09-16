@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Peptora — Promoción</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/theme.css?v=2">
+<link rel="icon" href="../favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/icon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="../assets/icons/icon-180.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#0EA99B">
+<style>
+  .switch-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;}
+  .switch{position:relative;width:46px;height:26px;flex-shrink:0;}
+  .switch input{opacity:0;width:0;height:0;}
+  .slider{position:absolute;cursor:pointer;inset:0;background:var(--line-strong);border-radius:26px;transition:.15s;}
+  .slider:before{content:"";position:absolute;height:20px;width:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.15s;}
+  input:checked + .slider{background:var(--teal);}
+  input:checked + .slider:before{transform:translateX(20px);}
+</style>
+</head>
+<body>
+<div class="form-wrap">
+  <a href="../" class="back">← dashboard</a>
+  <header>
+    <div class="eyebrow">Peptora · configuración</div>
+    <h1>Promoción por volumen</h1>
+    <p>Se aplica sola en /venta-rapida/ y /venta-vendedor/ cuando está activa — nada corre si la dejas apagada.</p>
+  </header>
+
+  <div class="token-bar" id="tokenBar">
+    <input type="password" id="tokenInput" placeholder="Pega tu GitHub token (se guarda solo en este navegador)">
+    <button onclick="guardarToken()">Guardar</button>
+  </div>
+
+  <div class="card">
+    <div class="switch-row">
+      <div>
+        <div style="font-weight:600;font-size:14px;">Promoción activa</div>
+        <div class="hint">Apagada: cada venta cobra su precio normal, sin sorpresas.</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="activoChk"><span class="slider"></span></label>
+    </div>
+    <div class="row" style="margin-top:10px;">
+      <div class="field"><label>Mínimo de productos distintos</label><input id="minimoProductos" type="number" min="2"></div>
+      <div class="field"><label>Descuento (%)</label><input id="descuentoPct" type="number" step="0.1" min="0" max="100"></div>
+    </div>
+    <div class="field full" style="margin-top:14px;"><label>Descripción (referencia interna)</label><input id="descripcion"></div>
+    <button class="btn" id="submitBtn" onclick="guardar()" style="margin-top:16px;">Guardar</button>
+    <span class="status" id="statusMsg"></span>
+  </div>
+</div>
+
+<script src="../js/datos.js"></script>
+<script>
+const REPO = 'peptoramx/Peptora';
+const API = `https://api.github.com/repos/${REPO}/contents`;
+let shaCache = {};
+
+function getToken(){ return localStorage.getItem('peptora_token'); }
+function guardarToken(){
+  const t = document.getElementById('tokenInput').value.trim();
+  if(!t) return;
+  localStorage.setItem('peptora_token', t);
+  document.getElementById('tokenBar').classList.remove('show');
+  init();
+}
+function ensureToken(){
+  if(!getToken()){ document.getElementById('tokenBar').classList.add('show'); return false; }
+  return true;
+}
+async function ghGetRaw(path){
+  const res = await fetch(`${API}/${path}`, { headers:{ 'Authorization':`Bearer ${getToken()}`, 'Accept':'application/vnd.github+json' } });
+  if(!res.ok) throw new Error(`GET ${path} -> ${res.status}`);
+  const json = await res.json();
+  shaCache[path] = json.sha;
+  return JSON.parse(decodeURIComponent(escape(atob(json.content))));
+}
+async function ghPut(path, dataObj, msg){
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(dataObj, null, 2))));
+  const body = { message: msg, content, branch:'main' };
+  if(shaCache[path]) body.sha = shaCache[path];
+  const res = await fetch(`${API}/${path}`, {
+    method:'PUT',
+    headers:{ 'Authorization':`Bearer ${getToken()}`, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json' },
+    body: JSON.stringify(body)
+  });
+  if(!res.ok) throw new Error(`PUT ${path} -> ${res.status}: ${await res.text()}`);
+  const json = await res.json();
+  shaCache[path] = json.content.sha;
+}
+function setStatus(msg, isErr){ const el=document.getElementById('statusMsg'); el.textContent=msg; el.className='status '+(isErr?'err':'ok'); }
+
+async function init(){
+  if(!ensureToken()) return;
+  try{
+    const promo = await ghGetRaw('data/promocion.json');
+    document.getElementById('activoChk').checked = !!promo.activo;
+    document.getElementById('minimoProductos').value = promo.minimo_productos;
+    document.getElementById('descuentoPct').value = promo.descuento_pct;
+    document.getElementById('descripcion').value = promo.descripcion || '';
+  }catch(e){ setStatus('Error cargando: ' + e.message, true); }
+}
+
+async function guardar(){
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; setStatus('Guardando…', false);
+  try{
+    const promo = {
+      activo: document.getElementById('activoChk').checked,
+      minimo_productos: parseInt(document.getElementById('minimoProductos').value) || 3,
+      descuento_pct: parseFloat(document.getElementById('descuentoPct').value) || 0,
+      descripcion: document.getElementById('descripcion').value.trim(),
+    };
+    await ghPut('data/promocion.json', promo, `Promoción: ${promo.activo?'activada':'desactivada'} (${promo.minimo_productos}+ = ${promo.descuento_pct}%)`);
+    setStatus('✓ Guardado', false);
+  }catch(e){ setStatus('Error: ' + e.message, true); }
+  finally{ btn.disabled = false; }
+}
+
+if(ensureToken()) init();
+</script>
+</body>
+</html>
