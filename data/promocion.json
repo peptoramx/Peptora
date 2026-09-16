@@ -1,5 +1,5 @@
 {
-  "activo": true,
+  "activo": false,
   "minimo_productos": 3,
   "descuento_pct": 10,
   "descripcion": "3 o más productos distintos en una venta: 10% de descuento, prorrateado entre los productos."
