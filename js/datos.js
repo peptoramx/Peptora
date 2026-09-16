@@ -144,9 +144,67 @@ function ventasDeVendedor(ventas, vendedorId){
   return ventas.filter(v => v.vendedor_id === vendedorId);
 }
 
-function comisionVendedor(ventas, vendedor){
+function comisionVendedor(ventas, vendedor, pagos){
+  pagos = pagos || [];
   const propias = ventasDeVendedor(ventas, vendedor.id);
   const totalVendido = propias.reduce((s,v) => s + (v.precio_vendido||0), 0);
   const comision = totalVendido * (vendedor.comision_pct||0) / 100;
-  return { totalVendido, comision, numVentas: propias.length };
+  const pagado = pagos.filter(p => p.vendedor_id === vendedor.id).reduce((s,p) => s + (p.monto||0), 0);
+  const pendiente = comision - pagado;
+  return { totalVendido, comision, numVentas: propias.length, pagado, pendiente };
+}
+
+// Reparte un descuento por volumen entre varias lineas de venta, proporcional al subtotal de cada una.
+// items: [{ producto_id, subtotal }]. promo: { activo, minimo_productos, descuento_pct }.
+function calcularPromocion(items, promo){
+  const distintos = new Set(items.map(i => i.producto_id)).size;
+  const aplica = !!(promo && promo.activo && distintos >= (promo.minimo_productos || 999));
+  const subtotalTotal = items.reduce((s,i) => s + i.subtotal, 0);
+  const descuentoTotal = aplica ? subtotalTotal * (promo.descuento_pct/100) : 0;
+  const resultado = items.map(i => {
+    const proporcion = subtotalTotal > 0 ? i.subtotal / subtotalTotal : 0;
+    const descuentoLinea = Math.round(descuentoTotal * proporcion * 100) / 100;
+    const totalLinea = Math.round((i.subtotal - descuentoLinea) * 100) / 100;
+    const pctLinea = i.subtotal > 0 ? Math.round(descuentoLinea/i.subtotal*10000)/100 : 0;
+    return { ...i, descuento_linea: descuentoLinea, total_linea: totalLinea, descuento_pct_linea: pctLinea };
+  });
+  return { aplica, distintos, subtotalTotal, descuentoTotal: Math.round(descuentoTotal*100)/100, items: resultado };
+}
+
+// Ranking global de productos por unidades vendidas (historico). Marca el ultimo 25% (o sin ventas) como rezagado.
+function popularidadProductos(lotes, ventas){
+  const nombrePorLote = Object.fromEntries(lotes.map(l => [l.id, l.producto_nombre]));
+  const unidades = {};
+  ventas.forEach(v => {
+    const nombre = v.producto_nombre || nombrePorLote[v.lote_id] || 'Desconocido';
+    unidades[nombre] = (unidades[nombre]||0) + (v.cantidad||0);
+  });
+  const todos = new Set([...Object.keys(unidades), ...lotes.map(l => l.producto_nombre)]);
+  const lista = [...todos].map(nombre => ({ nombre, unidades: unidades[nombre]||0 }));
+  lista.sort((a,b) => b.unidades - a.unidades);
+  const max = lista.length ? lista[0].unidades : 1;
+  const n = lista.length;
+  const corte = Math.ceil(n*0.75);
+  return lista.map((item,i) => ({ ...item, max, rezagado: item.unidades===0 || i>=corte }));
+}
+
+// Gate simple de acceso: bloquea la pagina completa hasta que haya un token guardado.
+function gateMasterToken(){
+  if(localStorage.getItem('peptora_token')) return true;
+  document.body.innerHTML = `
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg,#F3F6F5);font-family:'Space Grotesk',sans-serif;padding:20px;">
+      <div style="background:var(--surface,#fff);border:1px solid var(--line,#E1E7E5);border-radius:10px;padding:28px;max-width:360px;width:100%;box-shadow:0 8px 24px -8px rgba(20,32,31,.14);">
+        <div style="font-size:11px;color:#0A8074;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;font-weight:600;">Peptora · acceso restringido</div>
+        <div style="font-size:14px;margin-bottom:14px;color:#14201F;">Ingresa tu token de GitHub para continuar.</div>
+        <input id="gateTokenInput" type="password" placeholder="Token" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #CBD5D3;border-radius:6px;font-family:'IBM Plex Mono',monospace;margin-bottom:10px;">
+        <button id="gateTokenBtn" style="width:100%;padding:11px;background:#0EA99B;color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif;font-size:14px;">Entrar</button>
+      </div>
+    </div>`;
+  document.getElementById('gateTokenBtn').onclick = () => {
+    const v = document.getElementById('gateTokenInput').value.trim();
+    if(!v) return;
+    localStorage.setItem('peptora_token', v);
+    location.reload();
+  };
+  return false;
 }
