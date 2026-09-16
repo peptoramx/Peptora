@@ -156,13 +156,14 @@ function comisionVendedor(ventas, vendedor, pagos){
   return { totalVendido, comision, numVentas: propias.length, pagado, pendiente };
 }
 
-// Reparte un descuento por volumen entre varias lineas de venta, proporcional al subtotal de cada una.
-// items: [{ producto_id, subtotal }]. promo: { activo, minimo_productos, descuento_pct }.
-function calcularPromocion(items, promo){
-  const distintos = new Set(items.map(i => i.producto_id)).size;
-  const aplica = !!(promo && promo.activo && distintos >= (promo.minimo_productos || 999));
+// Reparte, PROPORCIONALMENTE AL SUBTOTAL, un descuento en % que el usuario escribe a mano para esa venta.
+// items: [{ producto_id, subtotal }]. descuentoPct: numero que el usuario captura (0 = sin descuento).
+// No hay nada automático aquí: si descuentoPct es 0 o no se manda, no se descuenta un peso.
+function calcularPromocion(items, descuentoPct){
+  descuentoPct = descuentoPct || 0;
+  const aplica = descuentoPct > 0;
   const subtotalTotal = items.reduce((s,i) => s + i.subtotal, 0);
-  const descuentoTotal = aplica ? subtotalTotal * (promo.descuento_pct/100) : 0;
+  const descuentoTotal = aplica ? subtotalTotal * (descuentoPct/100) : 0;
   const resultado = items.map(i => {
     const proporcion = subtotalTotal > 0 ? i.subtotal / subtotalTotal : 0;
     const descuentoLinea = Math.round(descuentoTotal * proporcion * 100) / 100;
@@ -170,7 +171,7 @@ function calcularPromocion(items, promo){
     const pctLinea = i.subtotal > 0 ? Math.round(descuentoLinea/i.subtotal*10000)/100 : 0;
     return { ...i, descuento_linea: descuentoLinea, total_linea: totalLinea, descuento_pct_linea: pctLinea };
   });
-  return { aplica, distintos, subtotalTotal, descuentoTotal: Math.round(descuentoTotal*100)/100, items: resultado };
+  return { aplica, subtotalTotal, descuentoTotal: Math.round(descuentoTotal*100)/100, items: resultado };
 }
 
 // Ranking global de productos por unidades vendidas (historico). Marca el ultimo 25% (o sin ventas) como rezagado.
