@@ -9,5 +9,29 @@
     "precio_vendido": 6120,
     "con_descuento": true,
     "descuento_pct": 70
+  },
+  {
+    "id": "venta_1789534510345_0",
+    "lote_id": "lote_004",
+    "producto_nombre": "KLOW",
+    "fecha": "2026-09-16T04:55:10.345Z",
+    "tipo_venta": "vial",
+    "cantidad": 1,
+    "precio_vendido": 3500,
+    "con_descuento": false,
+    "descuento_pct": 0,
+    "grupo_id": "venta_grp_1789534510345"
+  },
+  {
+    "id": "venta_1789534510354_1",
+    "lote_id": "lote_007",
+    "producto_nombre": "Bac Water 3ml",
+    "fecha": "2026-09-16T04:55:10.354Z",
+    "tipo_venta": "vial",
+    "cantidad": 1,
+    "precio_vendido": 150,
+    "con_descuento": false,
+    "descuento_pct": 0,
+    "grupo_id": "venta_grp_1789534510345"
   }
 ]
