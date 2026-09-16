@@ -20,7 +20,9 @@
     "precio_vendido": 3500,
     "con_descuento": false,
     "descuento_pct": 0,
-    "grupo_id": "venta_grp_1789534510345"
+    "grupo_id": "venta_grp_1789534510345",
+    "cancelada": true,
+    "fecha_cancelacion": "2026-09-16T05:05:41.261Z"
   },
   {
     "id": "venta_1789534510354_1",
