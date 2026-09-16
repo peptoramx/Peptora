@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Peptora — Popularidad de productos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/theme.css?v=2">
+<link rel="icon" href="../favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/icon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="../assets/icons/icon-180.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#0EA99B">
+<style>
+  .pop-row{display:grid;grid-template-columns:24px 1.6fr 2fr 90px auto;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);}
+  .pop-row:last-child{border-bottom:none;}
+  .pop-row .rank{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
+  .pop-row .name{font-weight:600;font-size:13px;}
+  .pop-bar-track{height:8px;background:var(--surface-alt);border-radius:4px;overflow:hidden;}
+  .pop-bar-fill{height:100%;background:var(--teal);}
+  .pop-bar-fill.rezagado{background:var(--amber);}
+  .pop-row .amt{font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;}
+</style>
+</head>
+<body>
+<div class="form-wrap" style="max-width:760px;">
+  <a href="../" class="back">← dashboard</a>
+  <header>
+    <div class="eyebrow">Peptora · reportes</div>
+    <h1>Popularidad de productos</h1>
+    <p>Unidades vendidas históricas por producto. Ámbar = candidato a promoción (último 25% o sin ventas).</p>
+  </header>
+  <div class="card" id="listaPopularidad"><div class="empty">Cargando…</div></div>
+</div>
+
+<script src="../js/datos.js"></script>
+<script>
+window.RUTA_DATOS_BASE = '../';
+
+async function init(){
+  if(typeof gateMasterToken === 'function' && !gateMasterToken()) return;
+  try{
+    const { lotes, ventas } = await cargarTodo();
+    const pop = popularidadProductos(lotes, ventas);
+    const el = document.getElementById('listaPopularidad');
+    if(!pop.length){ el.innerHTML = '<div class="empty">Sin productos todavía.</div>'; return; }
+    el.innerHTML = pop.map((p,i) => `
+      <div class="pop-row">
+        <div class="rank">0${i+1}</div>
+        <div class="name">${p.nombre}</div>
+        <div class="pop-bar-track"><div class="pop-bar-fill ${p.rezagado?'rezagado':''}" style="width:${Math.max(4, p.unidades/p.max*100)}%;"></div></div>
+        <div class="amt">${p.unidades} u</div>
+        <div>${p.rezagado ? '<span class="badge amber">Promocionar</span>' : ''}</div>
+      </div>`).join('');
+  }catch(e){
+    document.getElementById('listaPopularidad').innerHTML = `<div class="status err">Error: ${e.message}</div>`;
+  }
+}
+init();
+</script>
+</body>
+</html>
