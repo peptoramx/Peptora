@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Peptora — Editar lote</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/theme.css?v=2">
+<link rel="icon" href="../favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/icon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="../assets/icons/icon-180.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#0EA99B">
+</head>
+<body>
+<div class="form-wrap">
+  <a href="../" class="back">← dashboard</a>
+  <header>
+    <div class="eyebrow">Peptora · captura directa</div>
+    <h1>Editar / eliminar lote</h1>
+    <p>Corrige precios, costos o stock capturado — o elimina el lote.</p>
+  </header>
+
+  <div class="token-bar" id="tokenBar">
+    <input type="password" id="tokenInput" placeholder="Pega tu GitHub token (se guarda solo en este navegador)">
+    <button onclick="guardarToken()">Guardar</button>
+  </div>
+
+  <div class="card">
+    <div class="field">
+      <label>Selecciona un lote</label>
+      <select id="loteSelect" onchange="cargarLote()"><option value="">Cargando…</option></select>
+    </div>
+  </div>
+
+  <div id="formEdicion"></div>
+</div>
+
+<script src="../js/datos.js"></script>
+<script>
+const REPO = 'peptoramx/Peptora';
+const API = `https://api.github.com/repos/${REPO}/contents`;
+let lotes = [], shaCache = {};
+
+function getToken(){ return localStorage.getItem('peptora_token'); }
+function guardarToken(){
+  const t = document.getElementById('tokenInput').value.trim();
+  if(!t) return;
+  localStorage.setItem('peptora_token', t);
+  document.getElementById('tokenBar').classList.remove('show');
+  init();
+}
+function ensureToken(){
+  if(!getToken()){ document.getElementById('tokenBar').classList.add('show'); return false; }
+  return true;
+}
+async function ghGetRaw(path){
+  const res = await fetch(`${API}/${path}`, { headers:{ 'Authorization':`Bearer ${getToken()}`, 'Accept':'application/vnd.github+json' } });
+  if(!res.ok) throw new Error(`GET ${path} -> ${res.status}`);
+  const json = await res.json();
+  shaCache[path] = json.sha;
+  return JSON.parse(decodeURIComponent(escape(atob(json.content))) || '[]');
+}
+async function ghPut(path, dataArr, msg){
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(dataArr, null, 2))));
+  const body = { message: msg, content, branch:'main' };
+  if(shaCache[path]) body.sha = shaCache[path];
+  const res = await fetch(`${API}/${path}`, {
+    method:'PUT',
+    headers:{ 'Authorization':`Bearer ${getToken()}`, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json' },
+    body: JSON.stringify(body)
+  });
+  if(!res.ok) throw new Error(`PUT ${path} -> ${res.status}: ${await res.text()}`);
+  const json = await res.json();
+  shaCache[path] = json.content.sha;
+}
+
+async function init(){
+  if(!ensureToken()) return;
+  try{
+    lotes = await ghGetRaw('data/lotes.json');
+    const sel = document.getElementById('loteSelect');
+    sel.innerHTML = '<option value="">— seleccionar —</option>' +
+      lotes.map(l => `<option value="${l.id}">${l.producto_nombre} · ${l.lote||'s/lote'} (${l.proveedor_nombre})</option>`).join('');
+  }catch(e){ document.getElementById('formEdicion').innerHTML = `<div class="status err">Error: ${e.message}</div>`; }
+}
+
+function cargarLote(){
+  const id = document.getElementById('loteSelect').value;
+  const area = document.getElementById('formEdicion');
+  if(!id){ area.innerHTML = ''; return; }
+  const l = lotes.find(x => x.id === id);
+  area.innerHTML = `
+    <div class="card">
+      <h2>${l.producto_nombre} — ${l.lote||'s/lote'}</h2>
+      <div class="row">
+        <div class="field"><label>Fecha de caducidad</label><input id="e_caducidad" type="date" value="${l.fecha_caducidad||''}"></div>
+        <div class="field"><label>Concentración (mg)</label><input id="e_conc" type="number" step="0.01" value="${l.concentracion_mg||0}"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Viales por caja</label><input id="e_vpc" type="number" value="${l.viales_por_caja||0}" oninput="recalc()"></div>
+        <div class="field"><label>Stock (cajas)</label><input id="e_stockcaja" type="number" value="${l.stock_cajas||0}"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Stock (viales sueltos)</label><input id="e_stockvial" type="number" value="${l.stock_viales||0}"></div>
+        <div class="field"><label>&nbsp;</label><div class="hint">Total equivalente: <span id="e_totalstock"></span> unidades</div></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Costo de compra por caja</label><input id="e_costocaja" type="number" step="0.01" value="${l.costo_compra_caja||0}" oninput="recalc()"></div>
+        <div class="field"><label>Descuento al adquirir (%)</label><input id="e_descuento" type="number" step="0.01" value="${l.descuento_pct||0}" oninput="recalc()"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Costo neto por caja</label><div class="computed" id="e_costoneto"></div></div>
+        <div class="field"><label>Costo por vial</label><div class="computed" id="e_costovial"></div></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Precio de venta por caja</label><input id="e_preciocaja" type="number" step="0.01" value="${l.precio_venta_caja||0}"></div>
+        <div class="field"><label>Precio de venta por vial</label><input id="e_preciovial" type="number" step="0.01" value="${l.precio_venta_vial||0}"></div>
+      </div>
+      <div class="submit-bar">
+        <button class="btn" onclick="guardarCambios('${id}')">Guardar cambios</button>
+        <button class="btn ghost" style="color:var(--brick);border-color:var(--brick);" onclick="eliminarLote('${id}')">Eliminar lote</button>
+      </div>
+      <span class="status" id="statusMsg"></span>
+    </div>`;
+  recalc();
+}
+
+function recalc(){
+  const costoCaja = parseFloat(document.getElementById('e_costocaja').value)||0;
+  const descuento = parseFloat(document.getElementById('e_descuento').value)||0;
+  const vpc = parseFloat(document.getElementById('e_vpc').value)||0;
+  const costoNeto = costoCaja*(1-descuento/100);
+  const costoVial = vpc>0 ? costoNeto/vpc : 0;
+  document.getElementById('e_costoneto').textContent = formatMoneda(costoNeto);
+  document.getElementById('e_costovial').textContent = formatMoneda(costoVial);
+  const sc = parseFloat(document.getElementById('e_stockcaja').value)||0;
+  const sv = parseFloat(document.getElementById('e_stockvial').value)||0;
+  document.getElementById('e_totalstock').textContent = (sc*vpc + sv);
+}
+
+function setStatus(msg, isErr){ const el=document.getElementById('statusMsg'); if(el){el.textContent=msg; el.className='status '+(isErr?'err':'ok');} }
+
+async function guardarCambios(id){
+  const l = lotes.find(x => x.id === id);
+  const costoCaja = parseFloat(document.getElementById('e_costocaja').value)||0;
+  const descuento = parseFloat(document.getElementById('e_descuento').value)||0;
+  const vpc = parseFloat(document.getElementById('e_vpc').value)||0;
+  const costoNeto = costoCaja*(1-descuento/100);
+  Object.assign(l, {
+    fecha_caducidad: document.getElementById('e_caducidad').value,
+    concentracion_mg: parseFloat(document.getElementById('e_conc').value)||0,
+    viales_por_caja: vpc,
+    stock_cajas: parseFloat(document.getElementById('e_stockcaja').value)||0,
+    stock_viales: parseFloat(document.getElementById('e_stockvial').value)||0,
+    costo_compra_caja: costoCaja,
+    descuento_pct: descuento,
+    costo_neto_caja: Math.round(costoNeto*100)/100,
+    costo_por_vial: vpc>0 ? Math.round(costoNeto/vpc*100)/100 : 0,
+    precio_venta_caja: parseFloat(document.getElementById('e_preciocaja').value)||0,
+    precio_venta_vial: parseFloat(document.getElementById('e_preciovial').value)||0,
+  });
+  try{
+    await ghPut('data/lotes.json', lotes, `Editar lote: ${l.producto_nombre} ${l.lote||''}`);
+    setStatus('✓ Cambios guardados', false);
+  }catch(e){ setStatus('Error: ' + e.message, true); }
+}
+
+async function eliminarLote(id){
+  const l = lotes.find(x => x.id === id);
+  if(!confirm(`¿Eliminar el lote ${l.producto_nombre} · ${l.lote||'s/lote'}? Esta acción no se puede deshacer.`)) return;
+  lotes = lotes.filter(x => x.id !== id);
+  try{
+    await ghPut('data/lotes.json', lotes, `Eliminar lote: ${l.producto_nombre} ${l.lote||''}`);
+    document.getElementById('formEdicion').innerHTML = '';
+    init();
+  }catch(e){ setStatus('Error: ' + e.message, true); }
+}
+
+if(ensureToken()) init();
+</script>
+</body>
+</html>
