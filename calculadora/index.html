@@ -212,8 +212,7 @@ function calcular(){
   dibujarJeringa(unidades);
 }
 
-initLotes();
-dibujarJeringa(0);
+if(gateMasterToken()) { initLotes(); dibujarJeringa(0); }
 </script>
 </body>
 </html>
