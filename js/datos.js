@@ -64,6 +64,7 @@ function venderVial(lote, cantidad){
 }
 
 function calcularKPIs({ lotes, ventas }){
+  ventas = ventasActivas(ventas);
   const hoy = new Date();
   const mesActual = hoy.getMonth(), anioActual = hoy.getFullYear();
   let mesAnt = mesActual - 1, anioAnt = anioActual;
@@ -133,6 +134,7 @@ function proveedoresConConteo(proveedores, lotes){
 }
 
 function ventasRecientes(ventas, lotes, n=5){
+  ventas = ventasActivas(ventas);
   const lotesPorId = Object.fromEntries(lotes.map(l => [l.id, l]));
   return [...ventas]
     .sort((a,b) => new Date(b.fecha) - new Date(a.fecha))
@@ -141,7 +143,7 @@ function ventasRecientes(ventas, lotes, n=5){
 }
 
 function ventasDeVendedor(ventas, vendedorId){
-  return ventas.filter(v => v.vendedor_id === vendedorId);
+  return ventasActivas(ventas).filter(v => v.vendedor_id === vendedorId);
 }
 
 function comisionVendedor(ventas, vendedor, pagos){
@@ -173,6 +175,7 @@ function calcularPromocion(items, promo){
 
 // Ranking global de productos por unidades vendidas (historico). Marca el ultimo 25% (o sin ventas) como rezagado.
 function popularidadProductos(lotes, ventas){
+  ventas = ventasActivas(ventas);
   const nombrePorLote = Object.fromEntries(lotes.map(l => [l.id, l.producto_nombre]));
   const unidades = {};
   ventas.forEach(v => {
@@ -207,4 +210,14 @@ function gateMasterToken(){
     location.reload();
   };
   return false;
+}
+
+// Revierte el descuento de stock de una venta cancelada (inverso de venderCaja/venderVial).
+function revertirStock(lote, tipoVenta, cantidad){
+  if(tipoVenta === 'caja') lote.stock_cajas = (lote.stock_cajas||0) + cantidad;
+  else lote.stock_viales = (lote.stock_viales||0) + cantidad;
+}
+
+function ventasActivas(ventas){
+  return ventas.filter(v => !v.cancelada);
 }
