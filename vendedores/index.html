@@ -62,6 +62,9 @@
     <span class="status" id="statusMsg"></span>
   </div>
 
+  <div class="section-label"><div class="t">Ranking por ventas</div><div class="rule"></div></div>
+  <div class="panel" id="rankingPanel" style="margin-bottom:10px;"><div class="empty">Cargando…</div></div>
+
   <div class="section-label"><div class="t">Vendedores activos</div><div class="rule"></div></div>
   <div id="listaVendedores"></div>
 </div>
@@ -70,7 +73,7 @@
 <script>
 const REPO = 'peptoramx/Peptora';
 const API = `https://api.github.com/repos/${REPO}/contents`;
-let vendedores = [], ventas = [], lotes = [];
+let vendedores = [], ventas = [], lotes = [], pagos = [];
 let shaCache = {};
 
 function getToken(){ return localStorage.getItem('peptora_token'); }
@@ -121,8 +124,25 @@ async function init(){
       ghGetRaw('data/ventas.json'),
       ghGetRaw('data/lotes.json'),
     ]);
+    try{ pagos = await ghGetRaw('data/pagos_comisiones.json'); }catch(e){ pagos = []; }
+    renderRanking();
     renderLista();
   }catch(e){ setStatus('Error cargando datos: ' + e.message, true); }
+}
+
+function renderRanking(){
+  const el = document.getElementById('rankingPanel');
+  if(!vendedores.length){ el.innerHTML = '<div class="empty">Sin vendedores todavía.</div>'; return; }
+  const filas = vendedores.map(v => ({ nombre: v.nombre, ...comisionVendedor(ventas, v, pagos) }))
+    .sort((a,b) => b.totalVendido - a.totalVendido);
+  const max = filas.length ? Math.max(...filas.map(f=>f.totalVendido), 1) : 1;
+  el.innerHTML = filas.map((f,i) => `
+    <div class="bar-row">
+      <div class="rank">0${i+1}</div>
+      <div class="name">${f.nombre}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.max(4,f.totalVendido/max*100)}%;"></div></div>
+      <div class="amt">${formatMoneda(f.totalVendido)}</div>
+    </div>`).join('');
 }
 
 function renderLista(){
@@ -130,8 +150,9 @@ function renderLista(){
   if(!vendedores.length){ el.innerHTML = '<div class="empty">Sin vendedores todavía.</div>'; return; }
   const origin = location.origin + location.pathname.replace('vendedores/', '');
   el.innerHTML = vendedores.map(v => {
-    const stats = comisionVendedor(ventas, v);
+    const stats = comisionVendedor(ventas, v, pagos);
     const link = `${origin}venta-vendedor/?v=${v.id}`;
+    const qr = `https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${encodeURIComponent(link)}`;
     return `
     <div class="vend-card">
       <div class="vend-top">
@@ -146,14 +167,33 @@ function renderLista(){
         <div class="vend-stat"><div class="l">Ventas registradas</div><div class="v">${stats.numVentas}</div></div>
         <div class="vend-stat"><div class="l">Total vendido</div><div class="v">${formatMoneda(stats.totalVendido)}</div></div>
         <div class="vend-stat"><div class="l">Comisión acumulada</div><div class="v teal">${formatMoneda(stats.comision)}</div></div>
+        <div class="vend-stat"><div class="l">Pagado</div><div class="v">${formatMoneda(stats.pagado)}</div></div>
+        <div class="vend-stat"><div class="l">Pendiente</div><div class="v ${stats.pendiente>0?'':''}" style="color:${stats.pendiente>0?'var(--brick)':'var(--teal-deep)'};">${formatMoneda(stats.pendiente)}</div></div>
       </div>
       ${v.notas ? `<div class="hint" style="margin-top:8px;">${v.notas}</div>` : ''}
-      <div class="link-box">
-        <input readonly value="${link}" onclick="this.select()">
-        <button class="copy-btn" onclick="copiarLink('${link}', this)">Copiar link</button>
+      <div style="display:flex;gap:16px;align-items:flex-start;margin-top:12px;flex-wrap:wrap;">
+        <img src="${qr}" width="90" height="90" style="border-radius:6px;border:1px solid var(--line);" alt="QR">
+        <div style="flex:1;min-width:220px;">
+          <div class="link-box">
+            <input readonly value="${link}" onclick="this.select()">
+            <button class="copy-btn" onclick="copiarLink('${link}', this)">Copiar link</button>
+          </div>
+          <button class="link-btn" style="margin-top:8px;" onclick="registrarPago('${v.id}', ${stats.pendiente.toFixed(2)})">+ Registrar pago de comisión</button>
+        </div>
       </div>
     </div>`;
   }).join('');
+}
+
+async function registrarPago(vendedorId, pendienteSugerido){
+  const monto = parseFloat(prompt(`Monto a registrar como pagado (pendiente: ${formatMoneda(pendienteSugerido)}):`, pendienteSugerido));
+  if(!monto || monto <= 0) return;
+  pagos.push({ id:'pago_'+Date.now(), vendedor_id:vendedorId, fecha:new Date().toISOString().slice(0,10), monto });
+  try{
+    await ghPut('data/pagos_comisiones.json', pagos, `Pago de comisión registrado`);
+    renderRanking();
+    renderLista();
+  }catch(e){ setStatus('Error: ' + e.message, true); }
 }
 
 function copiarLink(link, btn){
