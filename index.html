@@ -31,6 +31,8 @@
       <a href="venta-rapida/"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2v6M12 22v-6M4.9 4.9l4.2 4.2M15 15l4.2 4.2M2 12h6M16 12h6M4.9 19.1l4.2-4.2M15 9l4.2-4.2"/></svg> Venta rápida</a>
       <a href="vendedores/"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> Vendedores</a>
       <a href="calculadora/"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 3v18M9 3h9a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H9M9 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3"/><path d="M13 8h4M13 12h4M13 16h2"/></svg> Calculadora</a>
+      <a href="editar-lote/"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg> Editar lote</a>
+      <a href="popularidad/"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg> Popularidad</a>
     </nav>
     <div class="foot">Escritura directa vía <b>token GitHub</b><br>mismo patrón que /captura/ de LMBC<br><span id="syncInfo">cargando…</span></div>
   </aside>
@@ -62,6 +64,18 @@
       </div>
       <div style="display:flex;gap:10px;">
         <a class="btn" href="nuevo-lote/">+ Alta de lote</a>
+      </div>
+    </div>
+
+    <div class="filters" style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
+      <input id="buscador" placeholder="Buscar producto o proveedor…" style="max-width:240px;" oninput="aplicarFiltros()">
+      <select id="filtroCategoria" onchange="aplicarFiltros()" style="max-width:200px;"><option value="">Todas las categorías</option></select>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-soft);">
+        <input type="checkbox" id="filtroRezagados" onchange="aplicarFiltros()" style="width:auto;"> solo caducidad/stock crítico
+      </label>
+      <div style="margin-left:auto;display:flex;gap:8px;">
+        <button class="btn ghost" onclick="exportarCSV('lotes')">Exportar lotes CSV</button>
+        <button class="btn ghost" onclick="exportarCSV('ventas')">Exportar ventas CSV</button>
       </div>
     </div>
 
@@ -229,14 +243,63 @@ function renderProveedores(proveedores, lotes){
   el.innerHTML = lista.map(p => `<div class="prov-item"><div class="n">${p.nombre}</div><div class="c">${p.lotesActivos} lote${p.lotesActivos===1?'':'s'} activo${p.lotesActivos===1?'':'s'}</div></div>`).join('');
 }
 
+let lotesGlobal = [], productosGlobal = [], ventasGlobal = [];
+
+function aplicarFiltros(){
+  const q = document.getElementById('buscador').value.trim().toLowerCase();
+  const cat = document.getElementById('filtroCategoria').value;
+  const soloAlerta = document.getElementById('filtroRezagados').checked;
+  const catPorProducto = Object.fromEntries(productosGlobal.map(p => [p.id, p.categoria]));
+
+  let filtrados = lotesGlobal.filter(l => {
+    const texto = (l.producto_nombre + ' ' + (l.proveedor_nombre||'')).toLowerCase();
+    if(q && !texto.includes(q)) return false;
+    if(cat && catPorProducto[l.producto_id] !== cat) return false;
+    if(soloAlerta){
+      const estado = estadoLote(l);
+      if(estado === 'teal') return false;
+    }
+    return true;
+  });
+  renderLotTable(filtrados);
+}
+
+function poblarFiltroCategoria(){
+  const cats = [...new Set(productosGlobal.map(p => p.categoria).filter(Boolean))].sort();
+  document.getElementById('filtroCategoria').innerHTML = '<option value="">Todas las categorías</option>' +
+    cats.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+function aCSV(rows){
+  if(!rows.length) return '';
+  const headers = Object.keys(rows[0]);
+  const escape = v => `"${String(v===undefined||v===null?'':v).replace(/"/g,'""')}"`;
+  return [headers.join(','), ...rows.map(r => headers.map(h => escape(r[h])).join(','))].join('\n');
+}
+function descargarArchivo(nombre, contenido, tipo){
+  const blob = new Blob([contenido], { type: tipo });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = nombre;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+function exportarCSV(tipo){
+  const fecha = new Date().toISOString().slice(0,10);
+  if(tipo === 'lotes') descargarArchivo(`peptora-lotes-${fecha}.csv`, aCSV(lotesGlobal), 'text/csv');
+  else descargarArchivo(`peptora-ventas-${fecha}.csv`, aCSV(ventasGlobal), 'text/csv');
+}
+
 async function init(){
   try{
     const { productos, proveedores, lotes, ventas } = await cargarTodo();
+    lotesGlobal = lotes; productosGlobal = productos; ventasGlobal = ventas;
     const k = calcularKPIs({ lotes, ventas });
     renderLedger(k);
     renderKPIs(k);
     renderTop5(k);
     renderSparkline(ventas);
+    poblarFiltroCategoria();
     renderLotTable(lotes);
     renderVentasRecientes(ventas, lotes);
     renderProveedores(proveedores, lotes);
@@ -246,7 +309,7 @@ async function init(){
     console.error(e);
   }
 }
-init();
+if(gateMasterToken()) init();
 </script>
 </body>
 </html>
