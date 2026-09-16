@@ -51,7 +51,9 @@
     "descuento_pct": 0,
     "cortesia": false,
     "nota": "",
-    "grupo_id": "venta_grp_1789535230006"
+    "grupo_id": "venta_grp_1789535230006",
+    "cancelada": true,
+    "fecha_cancelacion": "2026-09-16T05:07:28.596Z"
   },
   {
     "id": "venta_1789535230006_1",
