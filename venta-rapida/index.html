@@ -53,6 +53,11 @@
       </div>
       <div class="field"><label>Cantidad</label><input id="cantidad" type="number" min="1" value="1"></div>
     </div>
+    <div class="check-row"><input type="checkbox" id="precioManualChk" onchange="togglePrecioManual()"><label for="precioManualChk">Cortesía / precio manual</label></div>
+    <div class="row" id="precioManualRow" style="display:none;">
+      <div class="field"><label>Precio unitario a cobrar</label><input id="precioManual" type="number" step="0.01" placeholder="0 = cortesía"></div>
+      <div class="field"><label>Motivo (opcional)</label><input id="motivoManual" placeholder="Cortesía, cliente frecuente…"></div>
+    </div>
     <button class="btn ghost" style="width:100%;" onclick="agregarAlCarrito()">+ Agregar al carrito</button>
   </div>
 
@@ -138,6 +143,11 @@ function onLoteChange(){
   if(!l){ info.textContent=''; return; }
   info.textContent = `Disponible: ${l.stock_cajas} cajas · ${l.stock_viales} viales sueltos`;
   info.className = 'stock-info' + (stockEnViales(l) < 5 ? ' warn' : '');
+  const precioCatalogo = tipoVenta === 'caja' ? l.precio_venta_caja : l.precio_venta_vial;
+  document.getElementById('precioManual').value = precioCatalogo;
+}
+function togglePrecioManual(){
+  document.getElementById('precioManualRow').style.display = document.getElementById('precioManualChk').checked ? 'grid' : 'none';
 }
 document.addEventListener('change', (e) => { if(e.target.id === 'loteSelect') onLoteChange(); });
 
@@ -146,12 +156,18 @@ function agregarAlCarrito(){
   if(!l){ setStatus('Selecciona un lote', true); return; }
   const cantidad = parseInt(document.getElementById('cantidad').value) || 0;
   if(cantidad <= 0){ setStatus('Cantidad inválida', true); return; }
-  const precioUnit = tipoVenta === 'caja' ? l.precio_venta_caja : l.precio_venta_vial;
+  const precioLista = tipoVenta === 'caja' ? l.precio_venta_caja : l.precio_venta_vial;
+  const esManual = document.getElementById('precioManualChk').checked;
+  const precioUnit = esManual ? (parseFloat(document.getElementById('precioManual').value) || 0) : precioLista;
+  const motivo = esManual ? document.getElementById('motivoManual').value.trim() : '';
   carrito.push({
     lote_id: l.id, producto_id: l.producto_id, producto_nombre: l.producto_nombre, lote_codigo: l.lote,
-    tipo: tipoVenta, cantidad, precioUnit, subtotal: precioUnit*cantidad
+    tipo: tipoVenta, cantidad, precioUnit, precioLista, esManual, motivo,
+    subtotal: precioUnit*cantidad, subtotalLista: precioLista*cantidad
   });
   document.getElementById('cantidad').value = 1;
+  document.getElementById('precioManualChk').checked = false;
+  togglePrecioManual();
   setStatus('', false);
   renderCarrito();
 }
@@ -171,8 +187,8 @@ function renderCarrito(){
 
   el.innerHTML = carrito.map((c,i) => `
     <div class="cart-item">
-      <div><div class="n">${c.producto_nombre}</div><div class="meta">${c.lote_codigo||'s/lote'} · ${c.tipo}</div></div>
-      <div class="cell-mono">${c.cantidad} × ${formatMoneda(c.precioUnit)}</div>
+      <div><div class="n">${c.producto_nombre}${c.esManual?` <span class="badge amber" style="font-size:9px;">${c.precioUnit===0?'CORTESÍA':'MANUAL'}</span>`:''}</div><div class="meta">${c.lote_codigo||'s/lote'} · ${c.tipo}${c.motivo?' · '+c.motivo:''}</div></div>
+      <div class="cell-mono">${c.cantidad} × ${c.esManual && c.precioUnit!==c.precioLista ? `<s style="color:var(--muted);">${formatMoneda(c.precioLista)}</s> ${formatMoneda(c.precioUnit)}` : formatMoneda(c.precioUnit)}</div>
       <div class="cell-mono strong">${formatMoneda(promo.items[i].total_linea)}</div>
       <button class="rm" onclick="quitarDelCarrito(${i})">✕</button>
     </div>`).join('');
@@ -211,6 +227,8 @@ async function confirmarVenta(){
       const c = carrito[i];
       const l = lotes.find(x => x.id === c.lote_id);
       if(c.tipo === 'caja') venderCaja(l, c.cantidad); else venderVial(l, c.cantidad);
+      const totalLinea = promo.items[i].total_linea;
+      const descuentoPctReal = c.subtotalLista > 0 ? Math.round((c.subtotalLista - totalLinea)/c.subtotalLista*10000)/100 : 0;
       nuevasVentas.push({
         id: 'venta_' + Date.now() + '_' + i,
         lote_id: c.lote_id,
@@ -218,9 +236,12 @@ async function confirmarVenta(){
         fecha: new Date().toISOString(),
         tipo_venta: c.tipo,
         cantidad: c.cantidad,
-        precio_vendido: promo.items[i].total_linea,
-        con_descuento: promo.aplica,
-        descuento_pct: promo.items[i].descuento_pct_linea,
+        precio_vendido: totalLinea,
+        precio_lista: c.subtotalLista,
+        con_descuento: descuentoPctReal > 0.001,
+        descuento_pct: descuentoPctReal,
+        cortesia: c.esManual && c.precioUnit === 0,
+        nota: c.motivo || '',
         grupo_id: grupoId,
       });
     }
