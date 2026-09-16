@@ -43,14 +43,14 @@
   <div id="formArea"></div>
 </div>
 
-<script src="../js/datos.js"></script>
+<script src="../js/datos.js?v=2"></script>
 <script>
 const REPO = 'peptoramx/Peptora';
 const API = `https://api.github.com/repos/${REPO}/contents`;
 const params = new URLSearchParams(location.search);
 const vendedorId = params.get('v');
 
-let vendedor = null, lotes = [], promoConfig = { activo:false, minimo_productos:999, descuento_pct:0 };
+let vendedor = null, lotes = [];
 let shaCache = {}, tipoVenta = 'vial', carrito = [];
 
 function tokenKey(){ return 'peptora_token_v_' + vendedorId; }
@@ -103,7 +103,6 @@ async function init(){
     if(!vendedor.activo){ bloquear(`${vendedor.nombre}: cuenta desactivada. Contacta al administrador.`); return; }
     document.getElementById('vendHeader').innerHTML = `<div class="vend-header"><div class="n">${vendedor.nombre}</div><div class="l">${vendedor.ubicacion||''}</div></div>`;
     lotes = await ghGetRaw('data/lotes.json');
-    try{ promoConfig = await ghGetRaw('data/promocion.json'); }catch(e){}
     renderForm();
   }catch(e){ bloquear('Error de acceso — verifica tu token. (' + e.message + ')'); }
 }
@@ -127,17 +126,17 @@ function renderForm(){
         </div>
         <div class="field"><label>Cantidad</label><input id="cantidad" type="number" min="1" value="1"></div>
       </div>
-      <div class="check-row"><input type="checkbox" id="precioManualChk" onchange="togglePrecioManual()"><label for="precioManualChk">Cortesía / precio manual</label></div>
-      <div class="row" id="precioManualRow" style="display:none;">
-        <div class="field"><label>Precio unitario a cobrar</label><input id="precioManual" type="number" step="0.01" placeholder="0 = cortesía"></div>
-        <div class="field"><label>Motivo (opcional)</label><input id="motivoManual" placeholder="Cortesía, cliente frecuente…"></div>
-      </div>
+      <div class="check-row"><input type="checkbox" id="cortesiaChk"><label for="cortesiaChk">Cortesía (este artículo va gratis)</label></div>
       <button class="btn ghost" style="width:100%;" onclick="agregarAlCarrito()">+ Agregar al carrito</button>
     </div>
     <div class="card">
       <h2>Carrito</h2>
-      <div id="promoBanner" class="promo-banner"></div>
       <div id="carritoLista"><div class="empty">Carrito vacío.</div></div>
+      <div class="field" id="descuentoVentaField" style="display:none;margin-top:10px;">
+        <label>Descuento a esta venta (%) — 0 = sin descuento</label>
+        <input id="descuentoVenta" type="number" step="0.1" min="0" max="100" value="0" oninput="renderCarrito()">
+      </div>
+      <div id="promoBanner" class="promo-banner"></div>
       <div class="resumen" id="resumenCarrito" style="display:none;"></div>
     </div>
     <button class="btn" id="submitBtn" onclick="confirmarVenta()" style="width:100%;">Confirmar venta</button>
@@ -162,11 +161,6 @@ function onLoteChange(){
   if(!l){ info.textContent=''; return; }
   info.textContent = `Disponible: ${stockEnViales(l)} unidades`;
   info.className = 'stock-info' + (stockEnViales(l) < 5 ? ' warn' : '');
-  const precioCatalogo = tipoVenta === 'caja' ? l.precio_venta_caja : l.precio_venta_vial;
-  document.getElementById('precioManual').value = precioCatalogo;
-}
-function togglePrecioManual(){
-  document.getElementById('precioManualRow').style.display = document.getElementById('precioManualChk').checked ? 'grid' : 'none';
 }
 
 function agregarAlCarrito(){
@@ -175,14 +169,12 @@ function agregarAlCarrito(){
   const cantidad = parseInt(document.getElementById('cantidad').value) || 0;
   if(cantidad <= 0){ setStatus('Cantidad inválida', true); return; }
   const precioLista = tipoVenta === 'caja' ? l.precio_venta_caja : l.precio_venta_vial;
-  const esManual = document.getElementById('precioManualChk').checked;
-  const precioUnit = esManual ? (parseFloat(document.getElementById('precioManual').value) || 0) : precioLista;
-  const motivo = esManual ? document.getElementById('motivoManual').value.trim() : '';
+  const esCortesia = document.getElementById('cortesiaChk').checked;
+  const precioUnit = esCortesia ? 0 : precioLista;
   carrito.push({ lote_id:l.id, producto_id:l.producto_id, producto_nombre:l.producto_nombre, tipo:tipoVenta, cantidad,
-    precioUnit, precioLista, esManual, motivo, subtotal:precioUnit*cantidad, subtotalLista:precioLista*cantidad });
+    precioUnit, precioLista, esCortesia, subtotal:precioUnit*cantidad, subtotalLista:precioLista*cantidad });
   document.getElementById('cantidad').value = 1;
-  document.getElementById('precioManualChk').checked = false;
-  togglePrecioManual();
+  document.getElementById('cortesiaChk').checked = false;
   renderCarrito();
 }
 function quitarDelCarrito(idx){ carrito.splice(idx,1); renderCarrito(); }
@@ -191,23 +183,26 @@ function renderCarrito(){
   const el = document.getElementById('carritoLista');
   const resumenEl = document.getElementById('resumenCarrito');
   const banner = document.getElementById('promoBanner');
-  if(!carrito.length){ el.innerHTML = '<div class="empty">Carrito vacío.</div>'; resumenEl.style.display='none'; banner.classList.remove('show'); return; }
-  const promo = calcularPromocion(carrito.map(c=>({producto_id:c.producto_id, subtotal:c.subtotal})), promoConfig);
+  const descField = document.getElementById('descuentoVentaField');
+  if(!carrito.length){ el.innerHTML = '<div class="empty">Carrito vacío.</div>'; resumenEl.style.display='none'; descField.style.display='none'; banner.classList.remove('show'); return; }
+  descField.style.display = 'flex';
+  const descuentoPct = parseFloat(document.getElementById('descuentoVenta').value) || 0;
+  const promo = calcularPromocion(carrito.map(c=>({producto_id:c.producto_id, subtotal:c.subtotal})), descuentoPct);
   el.innerHTML = carrito.map((c,i) => `
     <div class="cart-item">
-      <div><div class="n">${c.producto_nombre}${c.esManual?` <span class="badge amber" style="font-size:9px;">${c.precioUnit===0?'CORTESÍA':'MANUAL'}</span>`:''}</div><div class="meta">${c.tipo}${c.motivo?' · '+c.motivo:''}</div></div>
-      <div class="cell-mono">${c.cantidad} × ${c.esManual && c.precioUnit!==c.precioLista ? `<s style="color:var(--muted);">${formatMoneda(c.precioLista)}</s> ${formatMoneda(c.precioUnit)}` : formatMoneda(c.precioUnit)}</div>
+      <div><div class="n">${c.producto_nombre}${c.esCortesia?' <span class="badge amber" style="font-size:9px;">CORTESÍA</span>':''}</div><div class="meta">${c.tipo}</div></div>
+      <div class="cell-mono">${c.cantidad} × ${formatMoneda(c.precioUnit)}</div>
       <div class="cell-mono strong">${formatMoneda(promo.items[i].total_linea)}</div>
       <button class="rm" onclick="quitarDelCarrito(${i})">✕</button>
     </div>`).join('');
   if(promo.aplica){
     banner.classList.add('show');
-    banner.textContent = `✓ Promoción: ${promoConfig.minimo_productos}+ productos → ${promoConfig.descuento_pct}% off (${formatMoneda(promo.descuentoTotal)})`;
+    banner.textContent = `Descuento de ${descuentoPct}% aplicado (${formatMoneda(promo.descuentoTotal)}), prorrateado.`;
   } else banner.classList.remove('show');
   resumenEl.style.display = 'block';
   resumenEl.innerHTML = `
     <div class="row"><span>Subtotal</span><span>${formatMoneda(promo.subtotalTotal)}</span></div>
-    ${promo.aplica?`<div class="row"><span>Descuento</span><span>-${formatMoneda(promo.descuentoTotal)}</span></div>`:''}
+    ${promo.aplica?`<div class="row"><span>Descuento (${descuentoPct}%)</span><span>-${formatMoneda(promo.descuentoTotal)}</span></div>`:''}
     <div class="row total"><span>Total</span><span>${formatMoneda(promo.subtotalTotal - promo.descuentoTotal)}</span></div>`;
 }
 
@@ -218,7 +213,8 @@ async function confirmarVenta(){
   const btn = document.getElementById('submitBtn');
   btn.disabled = true; setStatus('Registrando…', false);
   try{
-    const promo = calcularPromocion(carrito.map(c=>({producto_id:c.producto_id, subtotal:c.subtotal})), promoConfig);
+    const descuentoPct = parseFloat(document.getElementById('descuentoVenta').value) || 0;
+    const promo = calcularPromocion(carrito.map(c=>({producto_id:c.producto_id, subtotal:c.subtotal})), descuentoPct);
     const grupoId = 'venta_grp_' + Date.now();
     const nuevasVentas = [];
     for(let i=0;i<carrito.length;i++){
@@ -232,7 +228,7 @@ async function confirmarVenta(){
         fecha: new Date().toISOString(), tipo_venta: c.tipo, cantidad: c.cantidad,
         precio_vendido: totalLinea, precio_lista: c.subtotalLista,
         con_descuento: descuentoPctReal > 0.001, descuento_pct: descuentoPctReal,
-        cortesia: c.esManual && c.precioUnit === 0, nota: c.motivo || '',
+        cortesia: c.esCortesia,
         grupo_id: grupoId, vendedor_id: vendedor.id, vendedor_nombre: vendedor.nombre,
       });
     }
