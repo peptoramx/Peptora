@@ -9,10 +9,18 @@
 <link rel="stylesheet" href="../css/theme.css?v=2">
 <link rel="icon" href="../favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/icon-32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="../assets/icons/icon-16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="../assets/icons/icon-180.png">
 <link rel="manifest" href="../site.webmanifest">
 <meta name="theme-color" content="#0EA99B">
+<style>
+  .cart-item{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:12.5px;}
+  .cart-item:last-child{border-bottom:none;}
+  .cart-item .n{font-weight:600;}
+  .cart-item .meta{font-size:10.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+  .cart-item .rm{background:none;border:none;color:var(--brick);cursor:pointer;font-size:16px;padding:0 4px;}
+  .promo-banner{background:var(--teal-tint);color:var(--teal-deep);border-radius:var(--radius-sm);padding:10px 14px;font-size:12.5px;font-weight:600;margin-bottom:12px;display:none;}
+  .promo-banner.show{display:block;}
+</style>
 </head>
 <body>
 <div class="form-wrap">
@@ -20,7 +28,7 @@
   <header>
     <div class="eyebrow">Peptora · captura directa</div>
     <h1>Venta rápida</h1>
-    <p>Descuenta stock y registra el movimiento en <span style="font-family:'IBM Plex Mono',monospace;">data/ventas.json</span>.</p>
+    <p>Agrega varios productos al carrito — la promoción por volumen se aplica sola.</p>
   </header>
 
   <div class="token-bar" id="tokenBar">
@@ -29,45 +37,34 @@
   </div>
 
   <div class="card">
-    <div class="field">
+    <h2>Agregar producto</h2>
+    <div class="field" style="margin-bottom:14px;">
       <label>Lote</label>
-      <select id="loteSelect" onchange="onLoteChange()"><option value="">Cargando…</option></select>
+      <select id="loteSelect"><option value="">Cargando…</option></select>
       <div class="stock-info" id="stockInfo"></div>
     </div>
-
-    <div class="field">
-      <label>Tipo de venta</label>
-      <div class="tipo-toggle">
-        <button type="button" id="btnCaja" onclick="setTipo('caja')">Por caja</button>
-        <button type="button" id="btnVial" class="active" onclick="setTipo('vial')">Por vial</button>
+    <div class="row">
+      <div class="field">
+        <label>Tipo de venta</label>
+        <div class="tipo-toggle">
+          <button type="button" id="btnCaja" onclick="setTipo('caja')">Por caja</button>
+          <button type="button" id="btnVial" class="active" onclick="setTipo('vial')">Por vial</button>
+        </div>
       </div>
+      <div class="field"><label>Cantidad</label><input id="cantidad" type="number" min="1" value="1"></div>
     </div>
-
-    <div class="field">
-      <label>Cantidad</label>
-      <input id="cantidad" type="number" min="1" value="1" oninput="recalcularResumen()">
-    </div>
-
-    <div class="check-row">
-      <input type="checkbox" id="conDescuento" onchange="onDescuentoToggle()">
-      <label for="conDescuento">Venta con descuento</label>
-    </div>
-
-    <div class="field" id="descuentoField" style="display:none;">
-      <label>Descuento aplicado (%)</label>
-      <input id="descuentoPct" type="number" step="0.01" value="0" oninput="recalcularResumen()">
-    </div>
-
-    <div class="field">
-      <label>Precio final vendido (editable)</label>
-      <input id="precioVendido" type="number" step="0.01" oninput="precioEditadoManualmente=true">
-    </div>
-
-    <div class="resumen" id="resumen"></div>
-
-    <button class="btn" id="submitBtn" onclick="registrarVenta()">Registrar venta</button>
-    <span class="status" id="statusMsg"></span>
+    <button class="btn ghost" style="width:100%;" onclick="agregarAlCarrito()">+ Agregar al carrito</button>
   </div>
+
+  <div class="card">
+    <h2>Carrito</h2>
+    <div id="promoBanner" class="promo-banner"></div>
+    <div id="carritoLista"><div class="empty">Carrito vacío.</div></div>
+    <div class="resumen" id="resumenCarrito" style="display:none;"></div>
+  </div>
+
+  <button class="btn" id="submitBtn" onclick="confirmarVenta()" style="width:100%;">Confirmar venta</button>
+  <span class="status" id="statusMsg"></span>
 </div>
 
 <script src="../js/datos.js"></script>
@@ -76,10 +73,10 @@ const REPO = 'peptoramx/Peptora';
 const API = `https://api.github.com/repos/${REPO}/contents`;
 window.RUTA_DATOS_BASE = '../';
 
-let lotes = [], productos = [], proveedores = [];
+let lotes = [], promoConfig = { activo:false, minimo_productos:999, descuento_pct:0 };
 let shaCache = {};
 let tipoVenta = 'vial';
-let precioEditadoManualmente = false;
+let carrito = []; // { lote_id, producto_id, producto_nombre, lote_codigo, tipo, cantidad, precioUnit, subtotal }
 
 function getToken(){ return localStorage.getItem('peptora_token'); }
 function guardarToken(){
@@ -93,9 +90,8 @@ function ensureToken(){
   if(!getToken()){ document.getElementById('tokenBar').classList.add('show'); return false; }
   return true;
 }
-
 async function ghGetRaw(path){
-  const res = await fetch(`${API}/${path}`, { headers: { 'Authorization': `Bearer ${getToken()}`, 'Accept':'application/vnd.github+json' } });
+  const res = await fetch(`${API}/${path}`, { headers:{ 'Authorization':`Bearer ${getToken()}`, 'Accept':'application/vnd.github+json' } });
   if(!res.ok) throw new Error(`GET ${path} -> ${res.status}`);
   const json = await res.json();
   shaCache[path] = json.sha;
@@ -103,7 +99,7 @@ async function ghGetRaw(path){
 }
 async function ghPut(path, dataArr, msg){
   const content = btoa(unescape(encodeURIComponent(JSON.stringify(dataArr, null, 2))));
-  const body = { message: msg, content, branch: 'main' };
+  const body = { message: msg, content, branch:'main' };
   if(shaCache[path]) body.sha = shaCache[path];
   const res = await fetch(`${API}/${path}`, {
     method:'PUT',
@@ -118,119 +114,128 @@ async function ghPut(path, dataArr, msg){
 async function init(){
   if(!ensureToken()) return;
   try{
-    [productos, proveedores, lotes] = await Promise.all([
-      ghGetRaw('data/productos.json'), ghGetRaw('data/proveedores.json'), ghGetRaw('data/lotes.json')
-    ]);
+    lotes = await ghGetRaw('data/lotes.json');
+    try{ promoConfig = await ghGetRaw('data/promocion.json'); }catch(e){ /* usa default sin promo */ }
     renderLoteSelect();
   }catch(e){ setStatus('Error cargando datos: ' + e.message, true); }
 }
-
 function renderLoteSelect(){
   const sel = document.getElementById('loteSelect');
   const disponibles = lotes.filter(l => stockEnViales(l) > 0);
   sel.innerHTML = '<option value="">— seleccionar —</option>' +
-    disponibles.map(l => `<option value="${l.id}">${l.producto_nombre} · ${l.lote} (${l.stock_cajas} caj / ${l.stock_viales} via)</option>`).join('');
+    disponibles.map(l => `<option value="${l.id}">${l.producto_nombre} · ${l.lote||'s/lote'} (${l.stock_cajas} caj / ${l.stock_viales} via)</option>`).join('');
   onLoteChange();
 }
-
 function loteActual(){ return lotes.find(l => l.id === document.getElementById('loteSelect').value); }
-
 function setTipo(t){
   tipoVenta = t;
   document.getElementById('btnCaja').classList.toggle('active', t==='caja');
   document.getElementById('btnVial').classList.toggle('active', t==='vial');
-  precioEditadoManualmente = false;
-  recalcularResumen();
 }
-
 function onLoteChange(){
   const l = loteActual();
   const info = document.getElementById('stockInfo');
   if(!l){ info.textContent=''; return; }
-  info.textContent = `Disponible: ${l.stock_cajas} cajas · ${l.stock_viales} viales sueltos (${l.viales_por_caja}/caja)`;
+  info.textContent = `Disponible: ${l.stock_cajas} cajas · ${l.stock_viales} viales sueltos`;
   info.className = 'stock-info' + (stockEnViales(l) < 5 ? ' warn' : '');
-  precioEditadoManualmente = false;
-  recalcularResumen();
 }
+document.addEventListener('change', (e) => { if(e.target.id === 'loteSelect') onLoteChange(); });
 
-function onDescuentoToggle(){
-  document.getElementById('descuentoField').style.display = document.getElementById('conDescuento').checked ? 'flex' : 'none';
-  if(!document.getElementById('conDescuento').checked) document.getElementById('descuentoPct').value = 0;
-  recalcularResumen();
-}
-
-function recalcularResumen(){
-  const l = loteActual();
-  const resumen = document.getElementById('resumen');
-  if(!l){ resumen.innerHTML=''; return; }
-  const cantidad = parseInt(document.getElementById('cantidad').value) || 0;
-  const precioUnit = tipoVenta === 'caja' ? l.precio_venta_caja : l.precio_venta_vial;
-  const descuentoPct = parseFloat(document.getElementById('descuentoPct').value) || 0;
-  const subtotal = precioUnit * cantidad;
-  const totalConDescuento = subtotal * (1 - descuentoPct/100);
-
-  if(!precioEditadoManualmente){
-    document.getElementById('precioVendido').value = totalConDescuento.toFixed(2);
-  }
-
-  resumen.innerHTML = `
-    <div class="row"><span>Precio unitario (${tipoVenta})</span><span>${formatMoneda(precioUnit)}</span></div>
-    <div class="row"><span>Cantidad</span><span>${cantidad}</span></div>
-    <div class="row"><span>Subtotal</span><span>${formatMoneda(subtotal)}</span></div>
-    ${descuentoPct > 0 ? `<div class="row"><span>Descuento (${descuentoPct}%)</span><span>-${formatMoneda(subtotal*descuentoPct/100)}</span></div>` : ''}
-    <div class="row total"><span>Total a registrar</span><span>${formatMoneda(parseFloat(document.getElementById('precioVendido').value)||0)}</span></div>
-  `;
-}
-
-function setStatus(msg, isErr){
-  const el = document.getElementById('statusMsg');
-  el.textContent = msg;
-  el.className = 'status ' + (isErr ? 'err' : 'ok');
-}
-
-async function registrarVenta(){
-  if(!ensureToken()) return;
+function agregarAlCarrito(){
   const l = loteActual();
   if(!l){ setStatus('Selecciona un lote', true); return; }
   const cantidad = parseInt(document.getElementById('cantidad').value) || 0;
   if(cantidad <= 0){ setStatus('Cantidad inválida', true); return; }
+  const precioUnit = tipoVenta === 'caja' ? l.precio_venta_caja : l.precio_venta_vial;
+  carrito.push({
+    lote_id: l.id, producto_id: l.producto_id, producto_nombre: l.producto_nombre, lote_codigo: l.lote,
+    tipo: tipoVenta, cantidad, precioUnit, subtotal: precioUnit*cantidad
+  });
+  document.getElementById('cantidad').value = 1;
+  setStatus('', false);
+  renderCarrito();
+}
+function quitarDelCarrito(idx){ carrito.splice(idx,1); renderCarrito(); }
 
+function renderCarrito(){
+  const el = document.getElementById('carritoLista');
+  const resumenEl = document.getElementById('resumenCarrito');
+  const banner = document.getElementById('promoBanner');
+  if(!carrito.length){
+    el.innerHTML = '<div class="empty">Carrito vacío.</div>';
+    resumenEl.style.display = 'none';
+    banner.classList.remove('show');
+    return;
+  }
+  const promo = calcularPromocion(carrito.map(c=>({producto_id:c.producto_id, subtotal:c.subtotal})), promoConfig);
+
+  el.innerHTML = carrito.map((c,i) => `
+    <div class="cart-item">
+      <div><div class="n">${c.producto_nombre}</div><div class="meta">${c.lote_codigo||'s/lote'} · ${c.tipo}</div></div>
+      <div class="cell-mono">${c.cantidad} × ${formatMoneda(c.precioUnit)}</div>
+      <div class="cell-mono strong">${formatMoneda(promo.items[i].total_linea)}</div>
+      <button class="rm" onclick="quitarDelCarrito(${i})">✕</button>
+    </div>`).join('');
+
+  if(promo.aplica){
+    banner.classList.add('show');
+    banner.textContent = `✓ Promoción aplicada: ${promoConfig.minimo_productos}+ productos distintos → ${promoConfig.descuento_pct}% de descuento (${formatMoneda(promo.descuentoTotal)}), prorrateado.`;
+  } else {
+    banner.classList.remove('show');
+  }
+
+  resumenEl.style.display = 'block';
+  resumenEl.innerHTML = `
+    <div class="row"><span>Subtotal</span><span>${formatMoneda(promo.subtotalTotal)}</span></div>
+    ${promo.aplica ? `<div class="row"><span>Descuento por volumen</span><span>-${formatMoneda(promo.descuentoTotal)}</span></div>` : ''}
+    <div class="row total"><span>Total</span><span>${formatMoneda(promo.subtotalTotal - promo.descuentoTotal)}</span></div>`;
+}
+
+function setStatus(msg, isErr){
+  const el = document.getElementById('statusMsg');
+  el.textContent = msg; el.className = 'status ' + (isErr?'err':'ok');
+}
+
+async function confirmarVenta(){
+  if(!ensureToken()) return;
+  if(!carrito.length){ setStatus('El carrito está vacío', true); return; }
   const btn = document.getElementById('submitBtn');
-  btn.disabled = true;
-  setStatus('Registrando…', false);
+  btn.disabled = true; setStatus('Registrando…', false);
 
   try{
-    // Descontar stock (usa la lógica compartida de js/datos.js — rompe caja si hace falta)
-    if(tipoVenta === 'caja') venderCaja(l, cantidad); else venderVial(l, cantidad);
-    await ghPut('data/lotes.json', lotes, `Venta: -${cantidad} ${tipoVenta} de ${l.producto_nombre} ${l.lote}`);
+    const promo = calcularPromocion(carrito.map(c=>({producto_id:c.producto_id, subtotal:c.subtotal})), promoConfig);
+    const grupoId = 'venta_grp_' + Date.now();
+    const nuevasVentas = [];
 
-    const conDescuento = document.getElementById('conDescuento').checked;
-    const nuevaVenta = {
-      id: 'venta_' + Date.now(),
-      lote_id: l.id,
-      producto_nombre: l.producto_nombre,
-      fecha: new Date().toISOString(),
-      tipo_venta: tipoVenta,
-      cantidad,
-      precio_vendido: parseFloat(document.getElementById('precioVendido').value) || 0,
-      con_descuento: conDescuento,
-      descuento_pct: conDescuento ? (parseFloat(document.getElementById('descuentoPct').value)||0) : 0,
-    };
-    let ventas;
-    try{ ventas = await ghGetRaw('data/ventas.json'); } catch(e){ ventas = []; }
-    ventas.push(nuevaVenta);
-    await ghPut('data/ventas.json', ventas, `Registro de venta: ${l.producto_nombre} ${l.lote}`);
+    for(let i=0;i<carrito.length;i++){
+      const c = carrito[i];
+      const l = lotes.find(x => x.id === c.lote_id);
+      if(c.tipo === 'caja') venderCaja(l, c.cantidad); else venderVial(l, c.cantidad);
+      nuevasVentas.push({
+        id: 'venta_' + Date.now() + '_' + i,
+        lote_id: c.lote_id,
+        producto_nombre: c.producto_nombre,
+        fecha: new Date().toISOString(),
+        tipo_venta: c.tipo,
+        cantidad: c.cantidad,
+        precio_vendido: promo.items[i].total_linea,
+        con_descuento: promo.aplica,
+        descuento_pct: promo.items[i].descuento_pct_linea,
+        grupo_id: grupoId,
+      });
+    }
 
-    setStatus(`✓ Venta registrada — ${formatMoneda(nuevaVenta.precio_vendido)}`, false);
-    document.getElementById('cantidad').value = 1;
-    document.getElementById('conDescuento').checked = false;
-    onDescuentoToggle();
+    await ghPut('data/lotes.json', lotes, `Venta (${carrito.length} productos)`);
+    let ventas; try{ ventas = await ghGetRaw('data/ventas.json'); }catch(e){ ventas = []; }
+    ventas.push(...nuevasVentas);
+    await ghPut('data/ventas.json', ventas, `Registro de venta: ${carrito.length} productos`);
+
+    setStatus(`✓ Venta registrada — ${formatMoneda(promo.subtotalTotal - promo.descuentoTotal)}`, false);
+    carrito = [];
+    renderCarrito();
     renderLoteSelect();
-  }catch(e){
-    setStatus('Error: ' + e.message, true);
-  }finally{
-    btn.disabled = false;
-  }
+  }catch(e){ setStatus('Error: ' + e.message, true); }
+  finally{ btn.disabled = false; }
 }
 
 if(ensureToken()) init();
