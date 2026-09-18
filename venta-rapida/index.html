@@ -155,7 +155,7 @@ function agregarAlCarrito(){
   const precioUnit = esCortesia ? 0 : precioLista;
   carrito.push({
     lote_id: l.id, producto_id: l.producto_id, producto_nombre: l.producto_nombre, lote_codigo: l.lote,
-    tipo: tipoVenta, cantidad, precioUnit, precioLista, esCortesia,
+    tipo: tipoVenta, cantidad, precioUnit, precioLista, esCortesia, imagen_url: l.imagen_url || '',
     subtotal: precioUnit*cantidad, subtotalLista: precioLista*cantidad
   });
   document.getElementById('cantidad').value = 1;
@@ -183,7 +183,10 @@ function renderCarrito(){
 
   el.innerHTML = carrito.map((c,i) => `
     <div class="cart-item">
-      <div><div class="n">${c.producto_nombre}${c.esCortesia?' <span class="badge amber" style="font-size:9px;">CORTESÍA</span>':''}</div><div class="meta">${c.lote_codigo||'s/lote'} · ${c.tipo}</div></div>
+      <div style="display:flex;align-items:center;gap:9px;">
+        ${c.imagen_url ? `<img src="../${c.imagen_url}" style="width:30px;height:30px;object-fit:cover;border-radius:2px;border:1px solid var(--line-strong);flex-shrink:0;">` : ''}
+        <div><div class="n">${c.producto_nombre}${c.esCortesia?' <span class="badge amber" style="font-size:9px;">CORTESÍA</span>':''}</div><div class="meta">${c.lote_codigo||'s/lote'} · ${c.tipo}</div></div>
+      </div>
       <div class="cell-mono">${c.cantidad} × ${formatMoneda(c.precioUnit)}</div>
       <div class="cell-mono strong">${formatMoneda(promo.items[i].total_linea)}</div>
       <button class="rm" onclick="quitarDelCarrito(${i})">✕</button>
