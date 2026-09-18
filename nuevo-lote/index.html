@@ -130,8 +130,9 @@
       </div>
     </div>
     <div class="field full">
-      <label>Imagen del producto (URL, opcional)</label>
-      <input id="imagenUrl" placeholder="https://...">
+      <label>Imagen del producto (opcional)</label>
+      <input id="imagenFile" type="file" accept="image/*">
+      <img id="imagenPreview" style="display:none;max-width:140px;margin-top:10px;border:1px solid var(--hairline);border-radius:var(--radius);">
     </div>
   </div>
 
@@ -193,6 +194,35 @@ async function ghPut(path, dataArr, msg){
   const json = await res.json();
   shaCache[path] = json.content.sha;
 }
+
+// Sube un archivo binario (imagen) tal cual — el content ya viene en base64 real, sin el truco UTF-8 de ghPut.
+async function ghPutBinario(path, base64Content, msg){
+  const body = { message: msg, content: base64Content, branch: 'main' };
+  const res = await fetch(`${API}/${path}`, {
+    method: 'PUT',
+    headers: { 'Authorization': `Bearer ${getToken()}`, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json' },
+    body: JSON.stringify(body)
+  });
+  if(!res.ok) throw new Error(`PUT ${path} -> ${res.status}: ${await res.text()}`);
+}
+
+function leerArchivoBase64(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+document.getElementById('imagenFile').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  const preview = document.getElementById('imagenPreview');
+  if(!file){ preview.style.display = 'none'; return; }
+  const reader = new FileReader();
+  reader.onload = () => { preview.src = reader.result; preview.style.display = 'block'; };
+  reader.readAsDataURL(file);
+});
 
 async function cargarDatos(){
   if(!ensureToken()) return;
@@ -319,8 +349,19 @@ async function guardarLote(){
     const costoNeto = costoCaja * (1 - descuento/100);
     const costoVial = viales > 0 ? costoNeto / viales : 0;
 
+    const loteId = 'lote_' + Date.now();
+    let imagenUrl = '';
+    const archivoImagen = document.getElementById('imagenFile').files[0];
+    if(archivoImagen){
+      const ext = archivoImagen.name.split('.').pop().toLowerCase();
+      const rutaImagen = `assets/productos/${loteId}.${ext}`;
+      const base64 = await leerArchivoBase64(archivoImagen);
+      await ghPutBinario(rutaImagen, base64, `Foto de producto: ${loteId}`);
+      imagenUrl = rutaImagen; // relativo a la raiz del sitio (assets/productos/...) — cada pagina antepone su propio prefijo al mostrarla
+    }
+
     const nuevoLote = {
-      id: 'lote_' + Date.now(),
+      id: loteId,
       producto_id: productoId,
       producto_nombre: productoNombre,
       proveedor_id: proveedorId,
@@ -338,7 +379,7 @@ async function guardarLote(){
       precio_venta_vial: num('precioVial'),
       stock_cajas: num('stockCajas'),
       stock_viales: 0,
-      imagen_url: document.getElementById('imagenUrl').value.trim()
+      imagen_url: imagenUrl
     };
 
     lotes.push(nuevoLote);
