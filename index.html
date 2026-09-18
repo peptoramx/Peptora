@@ -208,7 +208,10 @@ function renderLotTable(lotes){
     return `
       <div class="lot-row">
         <div class="status-dot ${estado==='teal'?'':estado}"></div>
-        <div><div class="prod-name">${l.producto_nombre}</div><div class="prod-meta">${l.viales_por_caja} viales/caja${l.concentracion_mg?' · '+l.concentracion_mg+'mg':''}</div></div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          ${l.imagen_url ? `<img src="${l.imagen_url}" style="width:34px;height:34px;object-fit:cover;border-radius:2px;border:1px solid var(--hairline);flex-shrink:0;">` : ''}
+          <div><div class="prod-name">${l.producto_nombre}</div><div class="prod-meta">${l.viales_por_caja} viales/caja${l.concentracion_mg?' · '+l.concentracion_mg+'mg':''}</div></div>
+        </div>
         <div class="cell-mono" data-label="Proveedor">${l.proveedor_nombre||'—'}</div>
         <div class="cell-mono strong" data-label="Lote">${l.lote||'—'}</div>
         <div class="cell-mono strong" data-label="Stock">${l.stock_cajas} caj · ${l.stock_viales} via</div>
