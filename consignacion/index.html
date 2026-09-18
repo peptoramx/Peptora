@@ -71,7 +71,7 @@
   <div id="listaConsignacion"><div class="empty">Cargando…</div></div>
 </div>
 
-<script src="../js/datos.js?v=2"></script>
+<script src="../js/datos.js?v=3"></script>
 <script>
 const REPO = 'peptoramx/Peptora';
 const API = `https://api.github.com/repos/${REPO}/contents`;
@@ -126,7 +126,7 @@ function onLoteChange(){
 async function init(){
   if(!ensureToken()) return;
   try{
-    [lotes, vendedores, consignaciones] = await Promise.all([
+    [lotes, vendedores] = await Promise.all([
       ghGetRaw('data/lotes.json'), ghGetRaw('data/vendedores.json'),
     ]);
     try{ consignaciones = await ghGetRaw('data/consignaciones.json'); }catch(e){ consignaciones = []; }
