@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Peptora — Consignación</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/theme.css?v=4">
+<link rel="icon" href="../favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/icon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="../assets/icons/icon-180.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#A8863C">
+<style>
+  .vend-block{border:1px solid var(--line-strong);border-radius:6px;margin-bottom:14px;overflow:hidden;}
+  .vend-block-head{background:var(--paper-2);padding:12px 18px;display:flex;justify-content:space-between;align-items:center;}
+  .vend-block-head .n{font-weight:800;font-size:13.5px;}
+  .vend-block-head .t{font-size:11.5px;color:var(--gold);font-weight:700;}
+  .consig-item{display:grid;grid-template-columns:2fr 1fr 1fr auto auto;gap:10px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--line);font-size:12.5px;}
+  .consig-item:last-child{border-bottom:none;}
+  .consig-item .meta{font-size:10.5px;color:var(--muted);}
+  .mini-btn{background:none;border:1px solid var(--line-strong);border-radius:3px;padding:5px 9px;font-size:11px;font-weight:700;cursor:pointer;color:var(--ink);}
+  .mini-btn:hover{border-color:var(--gold);color:var(--gold);}
+  .mini-btn.sell{color:var(--positive);border-color:var(--positive);}
+  .mini-btn.return{color:var(--critical);border-color:var(--critical);}
+</style>
+</head>
+<body>
+<div class="form-wrap" style="max-width:820px;">
+  <a href="../" class="back">← dashboard</a>
+  <header>
+    <div class="eyebrow">Peptora · consignación</div>
+    <h1>Producto en consignación</h1>
+    <p>Lo que sale de tu inventario hacia un vendedor sin haberse vendido todavía — para saber quién tiene qué.</p>
+  </header>
+
+  <div class="token-bar" id="tokenBar">
+    <input type="password" id="tokenInput" placeholder="Pega tu GitHub token (se guarda solo en este navegador)">
+    <button onclick="guardarToken()">Guardar</button>
+  </div>
+
+  <div class="card">
+    <h2>Entregar en consignación</h2>
+    <div class="row">
+      <div class="field">
+        <label>Vendedor</label>
+        <select id="vendedorSelect"><option value="">Cargando…</option></select>
+      </div>
+      <div class="field">
+        <label>Lote</label>
+        <select id="loteSelect" onchange="onLoteChange()"><option value="">Cargando…</option></select>
+        <div class="stock-info" id="stockInfo"></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Tipo</label>
+        <div class="tipo-toggle">
+          <button type="button" id="btnCaja" onclick="setTipo('caja')">Por caja</button>
+          <button type="button" id="btnVial" class="active" onclick="setTipo('vial')">Por vial</button>
+        </div>
+      </div>
+      <div class="field"><label>Cantidad a entregar</label><input id="cantidad" type="number" min="1" value="1"></div>
+    </div>
+    <button class="btn" id="submitBtn" onclick="entregarConsignacion()">Entregar</button>
+    <span class="status" id="statusMsg"></span>
+  </div>
+
+  <div class="section-label"><div class="t">En posesión de cada vendedor</div><div class="rule"></div></div>
+  <div id="listaConsignacion"><div class="empty">Cargando…</div></div>
+</div>
+
+<script src="../js/datos.js?v=2"></script>
+<script>
+const REPO = 'peptoramx/Peptora';
+const API = `https://api.github.com/repos/${REPO}/contents`;
+let lotes = [], vendedores = [], consignaciones = [], shaCache = {}, tipoVenta = 'vial';
+
+function getToken(){ return localStorage.getItem('peptora_token'); }
+function guardarToken(){
+  const t = document.getElementById('tokenInput').value.trim();
+  if(!t) return;
+  localStorage.setItem('peptora_token', t);
+  document.getElementById('tokenBar').classList.remove('show');
+  init();
+}
+function ensureToken(){
+  if(!getToken()){ document.getElementById('tokenBar').classList.add('show'); return false; }
+  return true;
+}
+async function ghGetRaw(path){
+  const res = await fetch(`${API}/${path}`, { headers:{ 'Authorization':`Bearer ${getToken()}`, 'Accept':'application/vnd.github+json' } });
+  if(!res.ok) throw new Error(`GET ${path} -> ${res.status}`);
+  const json = await res.json();
+  shaCache[path] = json.sha;
+  return JSON.parse(decodeURIComponent(escape(atob(json.content))) || '[]');
+}
+async function ghPut(path, dataArr, msg){
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(dataArr, null, 2))));
+  const body = { message: msg, content, branch:'main' };
+  if(shaCache[path]) body.sha = shaCache[path];
+  const res = await fetch(`${API}/${path}`, {
+    method:'PUT',
+    headers:{ 'Authorization':`Bearer ${getToken()}`, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json' },
+    body: JSON.stringify(body)
+  });
+  if(!res.ok) throw new Error(`PUT ${path} -> ${res.status}: ${await res.text()}`);
+  const json = await res.json();
+  shaCache[path] = json.content.sha;
+}
+function setStatus(msg, isErr){ const el=document.getElementById('statusMsg'); el.textContent=msg; el.className='status '+(isErr?'err':'ok'); }
+function setTipo(t){
+  tipoVenta = t;
+  document.getElementById('btnCaja').classList.toggle('active', t==='caja');
+  document.getElementById('btnVial').classList.toggle('active', t==='vial');
+}
+function loteActual(){ return lotes.find(l => l.id === document.getElementById('loteSelect').value); }
+function onLoteChange(){
+  const l = loteActual();
+  const info = document.getElementById('stockInfo');
+  if(!l){ info.textContent=''; return; }
+  info.textContent = `En bodega: ${l.stock_cajas} cajas · ${l.stock_viales} viales sueltos`;
+}
+
+async function init(){
+  if(!ensureToken()) return;
+  try{
+    [lotes, vendedores, consignaciones] = await Promise.all([
+      ghGetRaw('data/lotes.json'), ghGetRaw('data/vendedores.json'),
+    ]);
+    try{ consignaciones = await ghGetRaw('data/consignaciones.json'); }catch(e){ consignaciones = []; }
+
+    const vSel = document.getElementById('vendedorSelect');
+    vSel.innerHTML = '<option value="">— seleccionar —</option>' +
+      vendedores.filter(v=>v.activo).map(v => `<option value="${v.id}">${v.nombre}</option>`).join('');
+
+    const lSel = document.getElementById('loteSelect');
+    const disponibles = lotes.filter(l => stockEnViales(l) > 0);
+    lSel.innerHTML = '<option value="">— seleccionar —</option>' +
+      disponibles.map(l => `<option value="${l.id}">${l.producto_nombre} · ${l.lote||'s/lote'}</option>`).join('');
+
+    renderLista();
+  }catch(e){ setStatus('Error cargando: ' + e.message, true); }
+}
+
+async function entregarConsignacion(){
+  const vendedorId = document.getElementById('vendedorSelect').value;
+  const l = loteActual();
+  const cantidad = parseInt(document.getElementById('cantidad').value) || 0;
+  if(!vendedorId){ setStatus('Selecciona un vendedor', true); return; }
+  if(!l){ setStatus('Selecciona un lote', true); return; }
+  if(cantidad <= 0){ setStatus('Cantidad inválida', true); return; }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; setStatus('Registrando entrega…', false);
+  try{
+    if(tipoVenta === 'caja') venderCaja(l, cantidad); else venderVial(l, cantidad);
+    await ghPut('data/lotes.json', lotes, `Entrega en consignación: ${l.producto_nombre} a vendedor`);
+
+    const vendedor = vendedores.find(v => v.id === vendedorId);
+    consignaciones.push({
+      id: 'consig_' + Date.now(),
+      vendedor_id: vendedorId, vendedor_nombre: vendedor.nombre,
+      lote_id: l.id, producto_nombre: l.producto_nombre, lote_codigo: l.lote,
+      tipo: tipoVenta, cantidad_entregada: cantidad, cantidad_pendiente: cantidad,
+      fecha_entrega: new Date().toISOString(),
+    });
+    await ghPut('data/consignaciones.json', consignaciones, `Consignación: ${cantidad} ${tipoVenta} de ${l.producto_nombre} a ${vendedor.nombre}`);
+
+    setStatus(`✓ Entregado a ${vendedor.nombre}`, false);
+    document.getElementById('cantidad').value = 1;
+    init();
+  }catch(e){ setStatus('Error: ' + e.message, true); }
+  finally{ btn.disabled = false; }
+}
+
+function renderLista(){
+  const el = document.getElementById('listaConsignacion');
+  const activasPorVendedor = {};
+  consignacionesActivas(consignaciones).forEach(c => {
+    (activasPorVendedor[c.vendedor_id] = activasPorVendedor[c.vendedor_id] || []).push(c);
+  });
+  const ids = Object.keys(activasPorVendedor);
+  if(!ids.length){ el.innerHTML = '<div class="empty">Nadie tiene producto en consignación ahora mismo.</div>'; return; }
+
+  el.innerHTML = ids.map(vid => {
+    const items = activasPorVendedor[vid];
+    const total = items.reduce((s,c)=>s+c.cantidad_pendiente,0);
+    return `
+    <div class="vend-block">
+      <div class="vend-block-head"><div class="n">${items[0].vendedor_nombre}</div><div class="t">${total} unidades pendientes</div></div>
+      ${items.map(c => `
+        <div class="consig-item">
+          <div>${c.producto_nombre}<div class="meta">${c.lote_codigo||'s/lote'} · entregado ${new Date(c.fecha_entrega).toLocaleDateString('es-MX')}</div></div>
+          <div class="cell-mono">${c.cantidad_pendiente} ${c.tipo}</div>
+          <div class="cell-mono">de ${c.cantidad_entregada}</div>
+          <button class="mini-btn sell" onclick="venderDesdeConsignacion('${c.id}')">Vendió</button>
+          <button class="mini-btn return" onclick="devolverConsignacion('${c.id}')">Devolvió</button>
+        </div>
+      `).join('')}
+    </div>`;
+  }).join('');
+}
+
+async function venderDesdeConsignacion(consigId){
+  const c = consignaciones.find(x => x.id === consigId);
+  const cantidadStr = prompt(`¿Cuántas unidades de ${c.producto_nombre} vendió? (pendientes: ${c.cantidad_pendiente})`, Math.min(1, c.cantidad_pendiente));
+  const cantidad = parseInt(cantidadStr);
+  if(!cantidad || cantidad <= 0 || cantidad > c.cantidad_pendiente){ if(cantidadStr!==null) alert('Cantidad inválida'); return; }
+  const l = lotes.find(x => x.id === c.lote_id);
+  const precioSugerido = c.tipo === 'caja' ? (l?.precio_venta_caja||0)*cantidad : (l?.precio_venta_vial||0)*cantidad;
+  const precioStr = prompt('Precio total cobrado por esa cantidad:', precioSugerido);
+  const precio = parseFloat(precioStr);
+  if(isNaN(precio)){ return; }
+
+  try{
+    c.cantidad_pendiente -= cantidad;
+    await ghPut('data/consignaciones.json', consignaciones, `Venta desde consignación: ${cantidad} de ${c.producto_nombre}`);
+
+    let ventas; try{ ventas = await ghGetRaw('data/ventas.json'); }catch(e){ ventas = []; }
+    ventas.push({
+      id: 'venta_' + Date.now(), lote_id: c.lote_id, producto_nombre: c.producto_nombre,
+      fecha: new Date().toISOString(), tipo_venta: c.tipo, cantidad,
+      precio_vendido: precio, con_descuento: false, descuento_pct: 0,
+      vendedor_id: c.vendedor_id, vendedor_nombre: c.vendedor_nombre,
+      origen: 'consignacion', consignacion_id: c.id,
+    });
+    await ghPut('data/ventas.json', ventas, `Venta desde consignación (${c.vendedor_nombre})`);
+    // Nota: NO se toca data/lotes.json aquí — el stock ya salió de bodega al momento de la entrega.
+    renderLista();
+  }catch(e){ alert('Error: ' + e.message); }
+}
+
+async function devolverConsignacion(consigId){
+  const c = consignaciones.find(x => x.id === consigId);
+  const cantidadStr = prompt(`¿Cuántas unidades de ${c.producto_nombre} devolvió? (pendientes: ${c.cantidad_pendiente})`, c.cantidad_pendiente);
+  const cantidad = parseInt(cantidadStr);
+  if(!cantidad || cantidad <= 0 || cantidad > c.cantidad_pendiente){ if(cantidadStr!==null) alert('Cantidad inválida'); return; }
+
+  try{
+    const l = lotes.find(x => x.id === c.lote_id);
+    if(l) revertirStock(l, c.tipo, cantidad);
+    c.cantidad_pendiente -= cantidad;
+    if(l) await ghPut('data/lotes.json', lotes, `Devolución de consignación: ${cantidad} de ${c.producto_nombre}`);
+    await ghPut('data/consignaciones.json', consignaciones, `Devolución registrada: ${c.vendedor_nombre}`);
+    renderLista();
+  }catch(e){ alert('Error: ' + e.message); }
+}
+
+if(ensureToken()) init();
+</script>
+</body>
+</html>
