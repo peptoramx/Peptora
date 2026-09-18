@@ -76,6 +76,24 @@ async function ghPut(path, dataArr, msg){
   shaCache[path] = json.content.sha;
 }
 
+async function ghPutBinario(path, base64Content, msg){
+  const body = { message: msg, content: base64Content, branch: 'main' };
+  const res = await fetch(`${API}/${path}`, {
+    method: 'PUT',
+    headers: { 'Authorization': `Bearer ${getToken()}`, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json' },
+    body: JSON.stringify(body)
+  });
+  if(!res.ok) throw new Error(`PUT ${path} -> ${res.status}: ${await res.text()}`);
+}
+function leerArchivoBase64(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 async function init(){
   if(!ensureToken()) return;
   try{
@@ -118,6 +136,11 @@ function cargarLote(){
         <div class="field"><label>Precio de venta por caja</label><input id="e_preciocaja" type="number" step="0.01" value="${l.precio_venta_caja||0}"></div>
         <div class="field"><label>Precio de venta por vial</label><input id="e_preciovial" type="number" step="0.01" value="${l.precio_venta_vial||0}"></div>
       </div>
+      <div class="field full">
+        <label>Foto del producto${l.imagen_url ? ' (ya tiene una — sube otra para reemplazarla)' : ''}</label>
+        ${l.imagen_url ? `<img src="../${l.imagen_url}" style="max-width:120px;border:1px solid var(--hairline);border-radius:var(--radius);margin-bottom:8px;">` : ''}
+        <input id="e_imagenFile" type="file" accept="image/*">
+      </div>
       <div class="submit-bar">
         <button class="btn" onclick="guardarCambios('${id}')">Guardar cambios</button>
         <button class="btn ghost" style="color:var(--brick);border-color:var(--brick);" onclick="eliminarLote('${id}')">Eliminar lote</button>
@@ -144,6 +167,14 @@ function setStatus(msg, isErr){ const el=document.getElementById('statusMsg'); i
 
 async function guardarCambios(id){
   const l = lotes.find(x => x.id === id);
+  const archivoImagen = document.getElementById('e_imagenFile').files[0];
+  if(archivoImagen){
+    const ext = archivoImagen.name.split('.').pop().toLowerCase();
+    const rutaImagen = `assets/productos/${id}.${ext}`;
+    const base64 = await leerArchivoBase64(archivoImagen);
+    await ghPutBinario(rutaImagen, base64, `Foto de producto actualizada: ${id}`);
+    l.imagen_url = rutaImagen;
+  }
   const costoCaja = parseFloat(document.getElementById('e_costocaja').value)||0;
   const descuento = parseFloat(document.getElementById('e_descuento').value)||0;
   const vpc = parseFloat(document.getElementById('e_vpc').value)||0;
