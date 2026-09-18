@@ -222,3 +222,18 @@ function revertirStock(lote, tipoVenta, cantidad){
 function ventasActivas(ventas){
   return ventas.filter(v => !v.cancelada);
 }
+
+// ---- Consignación: qué producto está físicamente en manos de cada vendedor, sin vender todavía ----
+
+// cantidad_pendiente = lo entregado menos lo ya vendido (desde este registro) menos lo devuelto.
+function consignacionesDeVendedor(consignaciones, vendedorId){
+  return consignaciones.filter(c => c.vendedor_id === vendedorId && c.cantidad_pendiente > 0);
+}
+
+function totalPendienteConsignacion(consignaciones, vendedorId){
+  return consignacionesDeVendedor(consignaciones, vendedorId).reduce((s,c) => s + c.cantidad_pendiente, 0);
+}
+
+function consignacionesActivas(consignaciones){
+  return consignaciones.filter(c => c.cantidad_pendiente > 0);
+}
