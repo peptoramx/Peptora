@@ -101,7 +101,7 @@ async function init(){
     vendedor = vendedores.find(v => v.id === vendedorId);
     if(!vendedor){ bloquear('Vendedor no encontrado.'); return; }
     if(!vendedor.activo){ bloquear(`${vendedor.nombre}: cuenta desactivada. Contacta al administrador.`); return; }
-    document.getElementById('vendHeader').innerHTML = `<div class="vend-header"><div class="n">${vendedor.nombre}</div><div class="l">${vendedor.ubicacion||''}</div></div>`;
+    document.getElementById('vendHeader').innerHTML = `<div class="vend-header"><div class="n">${vendedor.nombre}</div><div class="l">${vendedor.ubicacion||''}</div></div><a href="#" onclick="localStorage.removeItem(tokenKey()); location.reload(); return false;" style="font-size:11px;color:var(--gold);">cambiar mi token</a>`;
     lotes = await ghGetRaw('data/lotes.json');
     try{ consignaciones = await ghGetRaw('data/consignaciones.json'); }catch(e){ consignaciones = []; }
     renderForm();
