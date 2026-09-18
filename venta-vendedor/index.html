@@ -50,8 +50,8 @@ const API = `https://api.github.com/repos/${REPO}/contents`;
 const params = new URLSearchParams(location.search);
 const vendedorId = params.get('v');
 
-let vendedor = null, lotes = [];
-let shaCache = {}, tipoVenta = 'vial', carrito = [];
+let vendedor = null, lotes = [], consignaciones = [];
+let shaCache = {}, carrito = [];
 
 function tokenKey(){ return 'peptora_token_v_' + vendedorId; }
 function getToken(){ return localStorage.getItem(tokenKey()); }
@@ -103,29 +103,30 @@ async function init(){
     if(!vendedor.activo){ bloquear(`${vendedor.nombre}: cuenta desactivada. Contacta al administrador.`); return; }
     document.getElementById('vendHeader').innerHTML = `<div class="vend-header"><div class="n">${vendedor.nombre}</div><div class="l">${vendedor.ubicacion||''}</div></div>`;
     lotes = await ghGetRaw('data/lotes.json');
+    try{ consignaciones = await ghGetRaw('data/consignaciones.json'); }catch(e){ consignaciones = []; }
     renderForm();
   }catch(e){ bloquear('Error de acceso — verifica tu token. (' + e.message + ')'); }
 }
 
+function misConsignaciones(){
+  return consignaciones.filter(c => c.vendedor_id === vendedor.id && c.cantidad_pendiente > 0);
+}
+
 function renderForm(){
+  const mias = misConsignaciones();
+  if(!mias.length){
+    document.getElementById('formArea').innerHTML = `<div class="blocked">No tienes productos en consignación asignados ahora mismo. Contacta al administrador para que te entregue inventario.</div>`;
+    return;
+  }
   document.getElementById('formArea').innerHTML = `
     <div class="card">
       <h2>Agregar producto</h2>
       <div class="field" style="margin-bottom:14px;">
-        <label>Producto</label>
+        <label>Producto (de lo que tienes contigo)</label>
         <select id="loteSelect"><option value="">— seleccionar —</option></select>
         <div class="stock-info" id="stockInfo"></div>
       </div>
-      <div class="row">
-        <div class="field">
-          <label>Tipo de venta</label>
-          <div class="tipo-toggle">
-            <button type="button" id="btnCaja" onclick="setTipo('caja')">Por caja</button>
-            <button type="button" id="btnVial" class="active" onclick="setTipo('vial')">Por vial</button>
-          </div>
-        </div>
-        <div class="field"><label>Cantidad</label><input id="cantidad" type="number" min="1" value="1"></div>
-      </div>
+      <div class="field"><label>Cantidad</label><input id="cantidad" type="number" min="1" value="1"></div>
       <div class="check-row"><input type="checkbox" id="cortesiaChk"><label for="cortesiaChk">Cortesía (este artículo va gratis)</label></div>
       <button class="btn ghost" style="width:100%;" onclick="agregarAlCarrito()">+ Agregar al carrito</button>
     </div>
@@ -143,35 +144,34 @@ function renderForm(){
     <span class="status" id="statusMsg"></span>`;
 
   const sel = document.getElementById('loteSelect');
-  const disponibles = lotes.filter(l => stockEnViales(l) > 0);
   sel.innerHTML = '<option value="">— seleccionar —</option>' +
-    disponibles.map(l => `<option value="${l.id}">${l.producto_nombre}${l.concentracion_mg?' '+l.concentracion_mg+'mg':''}</option>`).join('');
+    mias.map(c => `<option value="${c.id}">${c.producto_nombre} — ${c.cantidad_pendiente} ${c.tipo} contigo</option>`).join('');
   sel.addEventListener('change', onLoteChange);
 }
 
-function loteActual(){ return lotes.find(l => l.id === document.getElementById('loteSelect').value); }
-function setTipo(t){
-  tipoVenta = t;
-  document.getElementById('btnCaja').classList.toggle('active', t==='caja');
-  document.getElementById('btnVial').classList.toggle('active', t==='vial');
-}
+function consigActual(){ return consignaciones.find(c => c.id === document.getElementById('loteSelect').value); }
 function onLoteChange(){
-  const l = loteActual();
+  const c = consigActual();
   const info = document.getElementById('stockInfo');
-  if(!l){ info.textContent=''; return; }
-  info.textContent = `Disponible: ${stockEnViales(l)} unidades`;
-  info.className = 'stock-info' + (stockEnViales(l) < 5 ? ' warn' : '');
+  const cantidadInput = document.getElementById('cantidad');
+  if(!c){ info.textContent=''; return; }
+  info.textContent = `Tienes contigo: ${c.cantidad_pendiente} ${c.tipo}`;
+  info.className = 'stock-info' + (c.cantidad_pendiente < 3 ? ' warn' : '');
+  cantidadInput.max = c.cantidad_pendiente;
 }
 
 function agregarAlCarrito(){
-  const l = loteActual();
-  if(!l){ setStatus('Selecciona un producto', true); return; }
+  const c = consigActual();
+  if(!c){ setStatus('Selecciona un producto', true); return; }
   const cantidad = parseInt(document.getElementById('cantidad').value) || 0;
   if(cantidad <= 0){ setStatus('Cantidad inválida', true); return; }
-  const precioLista = tipoVenta === 'caja' ? l.precio_venta_caja : l.precio_venta_vial;
+  const yaEnCarrito = carrito.filter(x => x.consignacion_id === c.id).reduce((s,x)=>s+x.cantidad, 0);
+  if(cantidad + yaEnCarrito > c.cantidad_pendiente){ setStatus(`Solo tienes ${c.cantidad_pendiente - yaEnCarrito} disponibles de eso`, true); return; }
+  const l = lotes.find(x => x.id === c.lote_id) || {};
+  const precioLista = c.tipo === 'caja' ? (l.precio_venta_caja||0) : (l.precio_venta_vial||0);
   const esCortesia = document.getElementById('cortesiaChk').checked;
   const precioUnit = esCortesia ? 0 : precioLista;
-  carrito.push({ lote_id:l.id, producto_id:l.producto_id, producto_nombre:l.producto_nombre, tipo:tipoVenta, cantidad,
+  carrito.push({ consignacion_id: c.id, lote_id:c.lote_id, producto_id:l.producto_id, producto_nombre:c.producto_nombre, tipo:c.tipo, cantidad,
     precioUnit, precioLista, esCortesia, imagen_url: l.imagen_url || '', subtotal:precioUnit*cantidad, subtotalLista:precioLista*cantidad });
   document.getElementById('cantidad').value = 1;
   document.getElementById('cortesiaChk').checked = false;
@@ -222,8 +222,9 @@ async function confirmarVenta(){
     const nuevasVentas = [];
     for(let i=0;i<carrito.length;i++){
       const c = carrito[i];
-      const l = lotes.find(x => x.id === c.lote_id);
-      if(c.tipo === 'caja') venderCaja(l, c.cantidad); else venderVial(l, c.cantidad);
+      const consig = consignaciones.find(x => x.id === c.consignacion_id);
+      if(!consig || consig.cantidad_pendiente < c.cantidad) throw new Error(`Ya no tienes suficiente de ${c.producto_nombre} en consignación`);
+      consig.cantidad_pendiente -= c.cantidad;
       const totalLinea = promo.items[i].total_linea;
       const descuentoPctReal = c.subtotalLista > 0 ? Math.round((c.subtotalLista - totalLinea)/c.subtotalLista*10000)/100 : 0;
       nuevasVentas.push({
@@ -231,11 +232,12 @@ async function confirmarVenta(){
         fecha: new Date().toISOString(), tipo_venta: c.tipo, cantidad: c.cantidad,
         precio_vendido: totalLinea, precio_lista: c.subtotalLista,
         con_descuento: descuentoPctReal > 0.001, descuento_pct: descuentoPctReal,
-        cortesia: c.esCortesia,
+        cortesia: c.esCortesia, origen: 'consignacion', consignacion_id: c.consignacion_id,
         grupo_id: grupoId, vendedor_id: vendedor.id, vendedor_nombre: vendedor.nombre,
       });
     }
-    await ghPut('data/lotes.json', lotes, `Venta (${vendedor.nombre}): ${carrito.length} productos`);
+    // Nota: NO se toca data/lotes.json — ese stock ya salio de bodega cuando se entrego en consignacion.
+    await ghPut('data/consignaciones.json', consignaciones, `Venta desde consignación (${vendedor.nombre}): ${carrito.length} productos`);
     let ventas; try{ ventas = await ghGetRaw('data/ventas.json'); }catch(e){ ventas = []; }
     ventas.push(...nuevasVentas);
     await ghPut('data/ventas.json', ventas, `Venta registrada por ${vendedor.nombre}`);
