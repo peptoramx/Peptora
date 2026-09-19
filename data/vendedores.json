@@ -3,11 +3,17 @@
     "id": "vend_dulce-katawra",
     "nombre": "Dulce Katawra",
     "telefono": "+52 662 225 0144",
-    "email": "",
-    "ubicacion": "",
-    "comision_pct": 0,
+    "email": "kamekata@gmail.com",
+    "ubicacion": "Hermosillo",
+    "comision_pct": 15,
     "activo": false,
     "fecha_alta": "2026-09-15",
-    "notas": "Hermana"
+    "notas": "Hermana",
+    "comisiones_categoria": {
+      "Insumos": 10,
+      "Péptidos": 15,
+      "NAD+ / Longevidad": 15,
+      "Nootrópicos": 20
+    }
   }
 ]
