@@ -82,5 +82,17 @@
     "cantidad_entregada": 3,
     "cantidad_pendiente": 3,
     "fecha_entrega": "2026-09-19T05:14:02.744Z"
+  },
+  {
+    "id": "consig_1789794854211",
+    "vendedor_id": "vend_fabiola-katawra",
+    "vendedor_nombre": "Fabiola Katawra",
+    "lote_id": "lote_003",
+    "producto_nombre": "Terzipatida",
+    "lote_codigo": "",
+    "tipo": "vial",
+    "cantidad_entregada": 3,
+    "cantidad_pendiente": 3,
+    "fecha_entrega": "2026-09-19T05:14:14.211Z"
   }
 ]
