@@ -115,13 +115,24 @@ function setTipo(t){
   tipoVenta = t;
   document.getElementById('btnCaja').classList.toggle('active', t==='caja');
   document.getElementById('btnVial').classList.toggle('active', t==='vial');
+  actualizarTopeCantidad();
 }
 function loteActual(){ return lotes.find(l => l.id === document.getElementById('loteSelect').value); }
 function onLoteChange(){
   const l = loteActual();
   const info = document.getElementById('stockInfo');
-  if(!l){ info.textContent=''; return; }
+  const cantidadInput = document.getElementById('cantidad');
+  if(!l){ info.textContent=''; cantidadInput.removeAttribute('max'); return; }
   info.textContent = `En bodega: ${l.stock_cajas} cajas · ${l.stock_viales} viales sueltos`;
+  actualizarTopeCantidad();
+}
+function actualizarTopeCantidad(){
+  const l = loteActual();
+  const cantidadInput = document.getElementById('cantidad');
+  if(!l) return;
+  const tope = tipoVenta === 'caja' ? l.stock_cajas : stockEnViales(l);
+  cantidadInput.max = tope;
+  if(parseInt(cantidadInput.value) > tope) cantidadInput.value = tope;
 }
 
 async function init(){
@@ -139,7 +150,7 @@ async function init(){
     const lSel = document.getElementById('loteSelect');
     const disponibles = lotes.filter(l => stockEnViales(l) > 0);
     lSel.innerHTML = '<option value="">— seleccionar —</option>' +
-      disponibles.map(l => `<option value="${l.id}">${l.producto_nombre}${l.concentracion_mg?' '+l.concentracion_mg+'mg':''} · ${l.lote||'s/lote'}</option>`).join('');
+      disponibles.map(l => `<option value="${l.id}">${l.producto_nombre}${l.concentracion_mg?' '+l.concentracion_mg+'mg':''} · ${l.lote||'s/lote'} — ${l.stock_cajas} caj / ${l.stock_viales} via disponibles</option>`).join('');
 
     renderLista();
   }catch(e){ setStatus('Error cargando: ' + e.message, true); }
@@ -152,6 +163,8 @@ async function entregarConsignacion(){
   if(!vendedorId){ setStatus('Selecciona un vendedor', true); return; }
   if(!l){ setStatus('Selecciona un lote', true); return; }
   if(cantidad <= 0){ setStatus('Cantidad inválida', true); return; }
+  const disponible = tipoVenta === 'caja' ? l.stock_cajas : stockEnViales(l);
+  if(cantidad > disponible){ setStatus(`Solo hay ${disponible} ${tipoVenta === 'caja' ? 'cajas' : 'viales'} disponibles de ${l.producto_nombre}`, true); return; }
 
   const btn = document.getElementById('submitBtn');
   btn.disabled = true; setStatus('Registrando entrega…', false);
