@@ -1,1 +1,14 @@
-[]
+[
+  {
+    "id": "consig_1789776352657",
+    "vendedor_id": "vend_dulce-katawra",
+    "vendedor_nombre": "Dulce Katawra",
+    "lote_id": "lote_004",
+    "producto_nombre": "KLOW",
+    "lote_codigo": "",
+    "tipo": "vial",
+    "cantidad_entregada": 1,
+    "cantidad_pendiente": 1,
+    "fecha_entrega": "2026-09-19T00:05:52.658Z"
+  }
+]
