@@ -139,7 +139,7 @@ async function init(){
     const lSel = document.getElementById('loteSelect');
     const disponibles = lotes.filter(l => stockEnViales(l) > 0);
     lSel.innerHTML = '<option value="">— seleccionar —</option>' +
-      disponibles.map(l => `<option value="${l.id}">${l.producto_nombre} · ${l.lote||'s/lote'}</option>`).join('');
+      disponibles.map(l => `<option value="${l.id}">${l.producto_nombre}${l.concentracion_mg?' '+l.concentracion_mg+'mg':''} · ${l.lote||'s/lote'}</option>`).join('');
 
     renderLista();
   }catch(e){ setStatus('Error cargando: ' + e.message, true); }
@@ -163,7 +163,7 @@ async function entregarConsignacion(){
     consignaciones.push({
       id: 'consig_' + Date.now(),
       vendedor_id: vendedorId, vendedor_nombre: vendedor.nombre,
-      lote_id: l.id, producto_nombre: l.producto_nombre, lote_codigo: l.lote,
+      lote_id: l.id, producto_nombre: l.producto_nombre, concentracion_mg: l.concentracion_mg || 0, lote_codigo: l.lote,
       tipo: tipoVenta, cantidad_entregada: cantidad, cantidad_pendiente: cantidad,
       fecha_entrega: new Date().toISOString(),
     });
@@ -193,7 +193,7 @@ function renderLista(){
       <div class="vend-block-head"><div class="n">${items[0].vendedor_nombre}</div><div class="t">${total} unidades pendientes</div></div>
       ${items.map(c => `
         <div class="consig-item">
-          <div>${c.producto_nombre}<div class="meta">${c.lote_codigo||'s/lote'} · entregado ${new Date(c.fecha_entrega).toLocaleDateString('es-MX')}</div></div>
+          <div>${c.producto_nombre}${(c.concentracion_mg || (lotes.find(l=>l.id===c.lote_id)||{}).concentracion_mg) ? ' ' + (c.concentracion_mg || lotes.find(l=>l.id===c.lote_id).concentracion_mg) + 'mg' : ''}<div class="meta">${c.lote_codigo||'s/lote'} · entregado ${new Date(c.fecha_entrega).toLocaleDateString('es-MX')}</div></div>
           <div class="cell-mono">${c.cantidad_pendiente} ${c.tipo}</div>
           <div class="cell-mono">de ${c.cantidad_entregada}</div>
           <button class="mini-btn sell" onclick="venderDesdeConsignacion('${c.id}')">Vendió</button>
