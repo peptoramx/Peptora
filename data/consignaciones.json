@@ -58,5 +58,17 @@
     "cantidad_entregada": 40,
     "cantidad_pendiente": 40,
     "fecha_entrega": "2026-09-19T05:12:55.887Z"
+  },
+  {
+    "id": "consig_1789794804905",
+    "vendedor_id": "vend_fabiola-katawra",
+    "vendedor_nombre": "Fabiola Katawra",
+    "lote_id": "lote_013",
+    "producto_nombre": "Bac Water 10ml",
+    "lote_codigo": "",
+    "tipo": "vial",
+    "cantidad_entregada": 30,
+    "cantidad_pendiente": 30,
+    "fecha_entrega": "2026-09-19T05:13:24.906Z"
   }
 ]
