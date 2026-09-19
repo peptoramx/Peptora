@@ -118,5 +118,17 @@
     "cantidad_entregada": 3,
     "cantidad_pendiente": 3,
     "fecha_entrega": "2026-09-19T05:14:46.876Z"
+  },
+  {
+    "id": "consig_1789794925378",
+    "vendedor_id": "vend_dulce-katawra",
+    "vendedor_nombre": "Dulce Katawra",
+    "lote_id": "lote_016",
+    "producto_nombre": "BPC-157 + TB-500",
+    "lote_codigo": "z51-z12",
+    "tipo": "vial",
+    "cantidad_entregada": 3,
+    "cantidad_pendiente": 3,
+    "fecha_entrega": "2026-09-19T05:15:25.378Z"
   }
 ]
