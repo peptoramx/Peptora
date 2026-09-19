@@ -155,5 +155,18 @@
     "cantidad_entregada": 3,
     "cantidad_pendiente": 3,
     "fecha_entrega": "2026-09-19T05:23:47.247Z"
+  },
+  {
+    "id": "consig_1789795439942",
+    "vendedor_id": "vend_fabiola-katawra",
+    "vendedor_nombre": "Fabiola Katawra",
+    "lote_id": "lote_007",
+    "producto_nombre": "Bac Water 3ml",
+    "concentracion_mg": 0,
+    "lote_codigo": "",
+    "tipo": "vial",
+    "cantidad_entregada": 3,
+    "cantidad_pendiente": 3,
+    "fecha_entrega": "2026-09-19T05:23:59.942Z"
   }
 ]
