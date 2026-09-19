@@ -11,21 +11,25 @@
 <link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/icon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="../assets/icons/icon-180.png">
 <link rel="manifest" href="../site.webmanifest">
-<meta name="theme-color" content="#0EA99B">
+<meta name="theme-color" content="#A8863C">
 <style>
-  .vend-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin-bottom:12px;box-shadow:var(--shadow-1);}
+  .vend-card{background:var(--surface);border:1px solid var(--line-strong);border-radius:6px;padding:18px 20px;margin-bottom:12px;}
   .vend-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;}
-  .vend-name{font-size:15px;font-weight:700;color:var(--ink);}
-  .vend-meta{font-size:11.5px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;margin-top:3px;}
+  .vend-name{font-size:15px;font-weight:800;color:var(--ink);}
+  .vend-meta{font-size:11.5px;color:var(--ink-soft);margin-top:3px;}
   .vend-stats{display:flex;gap:22px;margin-top:14px;flex-wrap:wrap;}
-  .vend-stat .l{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;}
-  .vend-stat .v{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;color:var(--ink);}
-  .vend-stat .v.teal{color:var(--teal-deep);}
-  .vend-actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;}
-  .toggle-badge{cursor:pointer;border:none;}
-  .link-box{display:flex;gap:8px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-sm);padding:8px 10px;margin-top:10px;}
-  .link-box input{border:none;background:none;font-size:11.5px;padding:0;}
-  .copy-btn{background:var(--teal-tint);color:var(--teal-deep);border:none;border-radius:var(--radius-sm);padding:6px 10px;font-size:11px;font-weight:600;cursor:pointer;flex-shrink:0;}
+  .vend-stat .l{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;}
+  .vend-stat .v{font-size:16px;font-weight:800;color:var(--ink);}
+  .vend-actions{display:flex;gap:14px;margin-top:12px;flex-wrap:wrap;}
+  .toggle-badge{cursor:pointer;border:none;background:none;padding:0;}
+  .link-box{display:flex;gap:8px;align-items:center;background:var(--paper);border:1px solid var(--line-strong);border-radius:4px;padding:8px 10px;margin-top:10px;}
+  .link-box input{border:none;background:none;font-size:11.5px;padding:0;color:var(--ink);}
+  .copy-btn{background:var(--gold-soft);color:var(--gold);border:none;border-radius:4px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;}
+  .edit-panel{border-top:1px dashed var(--line-strong);margin-top:14px;padding-top:14px;display:none;}
+  .edit-panel.show{display:block;}
+  .cat-row{display:grid;grid-template-columns:1.5fr 1fr auto;gap:8px;align-items:center;margin-bottom:8px;}
+  .cat-row select, .cat-row input{margin:0;}
+  .rm-cat{background:none;border:none;color:var(--critical);font-size:16px;cursor:pointer;padding:0 6px;}
 </style>
 </head>
 <body>
@@ -35,7 +39,7 @@
   <header>
     <div class="eyebrow">Peptora · vendedores externos</div>
     <h1>Vendedores</h1>
-    <p>Alta de vendedores, su portal de venta propio y comisiones acumuladas.</p>
+    <p>Alta, edición, baja, y comisión — pareja o por categoría de producto.</p>
   </header>
 
   <div class="token-bar" id="tokenBar">
@@ -47,7 +51,7 @@
     <h2>Alta de vendedor</h2>
     <div class="row">
       <div class="field"><label>Nombre completo</label><input id="nombre" placeholder="Camila Rodríguez"></div>
-      <div class="field"><label>Comisión (%)</label><input id="comisionPct" type="number" step="0.1" placeholder="15"></div>
+      <div class="field"><label>Comisión por default (%)</label><input id="comisionPct" type="number" step="0.1" placeholder="15"></div>
     </div>
     <div class="row">
       <div class="field"><label>Teléfono</label><input id="telefono" placeholder="662 123 4567"></div>
@@ -66,7 +70,7 @@
   <div class="section-label"><div class="t">Ranking por ventas</div><div class="rule"></div></div>
   <div class="panel" id="rankingPanel" style="margin-bottom:10px;"><div class="empty">Cargando…</div></div>
 
-  <div class="section-label"><div class="t">Vendedores activos</div><div class="rule"></div></div>
+  <div class="section-label"><div class="t">Vendedores</div><div class="rule"></div></div>
   <div id="listaVendedores"></div>
 </div>
 
@@ -74,8 +78,10 @@
 <script>
 const REPO = 'peptoramx/Peptora';
 const API = `https://api.github.com/repos/${REPO}/contents`;
-let vendedores = [], ventas = [], lotes = [], pagos = [];
+let vendedores = [], ventas = [], lotes = [], productos = [], pagos = [];
 let shaCache = {};
+let editandoId = null;
+let categoriasEdicion = []; // [{categoria, pct}] mientras se edita un vendedor
 
 function getToken(){ return localStorage.getItem('peptora_token'); }
 function guardarToken(){
@@ -120,10 +126,11 @@ function slugify(s){
 async function init(){
   if(!ensureToken()) return;
   try{
-    [vendedores, ventas, lotes] = await Promise.all([
+    [vendedores, ventas, lotes, productos] = await Promise.all([
       ghGetRaw('data/vendedores.json'),
       ghGetRaw('data/ventas.json'),
       ghGetRaw('data/lotes.json'),
+      ghGetRaw('data/productos.json'),
     ]);
     try{ pagos = await ghGetRaw('data/pagos_comisiones.json'); }catch(e){ pagos = []; }
     renderRanking();
@@ -131,10 +138,14 @@ async function init(){
   }catch(e){ setStatus('Error cargando datos: ' + e.message, true); }
 }
 
+function categoriasDisponibles(){
+  return [...new Set(productos.map(p => p.categoria).filter(Boolean))].sort();
+}
+
 function renderRanking(){
   const el = document.getElementById('rankingPanel');
   if(!vendedores.length){ el.innerHTML = '<div class="empty">Sin vendedores todavía.</div>'; return; }
-  const filas = vendedores.map(v => ({ nombre: v.nombre, ...comisionVendedor(ventas, v, pagos) }))
+  const filas = vendedores.map(v => ({ nombre: v.nombre, ...comisionVendedor(ventas, v, pagos, lotes, productos) }))
     .sort((a,b) => b.totalVendido - a.totalVendido);
   const max = filas.length ? Math.max(...filas.map(f=>f.totalVendido), 1) : 1;
   el.innerHTML = filas.map((f,i) => `
@@ -151,9 +162,13 @@ function renderLista(){
   if(!vendedores.length){ el.innerHTML = '<div class="empty">Sin vendedores todavía.</div>'; return; }
   const origin = location.origin + location.pathname.replace('vendedores/', '');
   el.innerHTML = vendedores.map(v => {
-    const stats = comisionVendedor(ventas, v, pagos);
+    const stats = comisionVendedor(ventas, v, pagos, lotes, productos);
     const link = `${origin}venta-vendedor/?v=${v.id}`;
     const qr = `https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${encodeURIComponent(link)}`;
+    const overrides = v.comisiones_categoria || {};
+    const overridesTxt = Object.keys(overrides).length
+      ? Object.entries(overrides).map(([c,p]) => `${c}: ${p}%`).join(' · ')
+      : 'sin excepciones — todo al default';
     return `
     <div class="vend-card">
       <div class="vend-top">
@@ -161,29 +176,115 @@ function renderLista(){
           <div class="vend-name">${v.nombre}</div>
           <div class="vend-meta">${v.ubicacion||'—'} · ${v.telefono||'sin tel'} · ${v.email||'sin email'}</div>
         </div>
-        <span class="badge ${v.activo?'teal':'brick'} toggle-badge" onclick="toggleActivo('${v.id}')">${v.activo?'Activo':'Inactivo'}</span>
+        <button class="badge ${v.activo?'teal':'brick'} toggle-badge" onclick="toggleActivo('${v.id}')">${v.activo?'Activo':'Inactivo — dado de baja'}</button>
       </div>
       <div class="vend-stats">
-        <div class="vend-stat"><div class="l">Comisión</div><div class="v">${v.comision_pct}%</div></div>
-        <div class="vend-stat"><div class="l">Ventas registradas</div><div class="v">${stats.numVentas}</div></div>
+        <div class="vend-stat"><div class="l">Comisión default</div><div class="v">${v.comision_pct}%</div></div>
+        <div class="vend-stat"><div class="l">Ventas</div><div class="v">${stats.numVentas}</div></div>
         <div class="vend-stat"><div class="l">Total vendido</div><div class="v">${formatMoneda(stats.totalVendido)}</div></div>
-        <div class="vend-stat"><div class="l">Comisión acumulada</div><div class="v teal">${formatMoneda(stats.comision)}</div></div>
+        <div class="vend-stat"><div class="l">Comisión acumulada</div><div class="v" style="color:var(--gold);">${formatMoneda(stats.comision)}</div></div>
         <div class="vend-stat"><div class="l">Pagado</div><div class="v">${formatMoneda(stats.pagado)}</div></div>
-        <div class="vend-stat"><div class="l">Pendiente</div><div class="v ${stats.pendiente>0?'':''}" style="color:${stats.pendiente>0?'var(--brick)':'var(--teal-deep)'};">${formatMoneda(stats.pendiente)}</div></div>
+        <div class="vend-stat"><div class="l">Pendiente</div><div class="v" style="color:${stats.pendiente>0?'var(--critical)':'var(--positive)'};">${formatMoneda(stats.pendiente)}</div></div>
       </div>
-      ${v.notas ? `<div class="hint" style="margin-top:8px;">${v.notas}</div>` : ''}
+      <div class="hint" style="margin-top:8px;">Comisión por categoría: ${overridesTxt}</div>
+      ${v.notas ? `<div class="hint" style="margin-top:4px;">${v.notas}</div>` : ''}
       <div style="display:flex;gap:16px;align-items:flex-start;margin-top:12px;flex-wrap:wrap;">
-        <img src="${qr}" width="90" height="90" style="border-radius:6px;border:1px solid var(--line);" alt="QR">
+        <img src="${qr}" width="90" height="90" style="border-radius:4px;border:1px solid var(--line-strong);" alt="QR">
         <div style="flex:1;min-width:220px;">
           <div class="link-box">
             <input readonly value="${link}" onclick="this.select()">
             <button class="copy-btn" onclick="copiarLink('${link}', this)">Copiar link</button>
           </div>
-          <button class="link-btn" style="margin-top:8px;" onclick="registrarPago('${v.id}', ${stats.pendiente.toFixed(2)})">+ Registrar pago de comisión</button>
+          <div class="vend-actions">
+            <button class="link-btn" onclick="registrarPago('${v.id}', ${stats.pendiente.toFixed(2)})">+ Registrar pago</button>
+            <button class="link-btn" onclick="toggleEditar('${v.id}')">${editandoId===v.id?'Cerrar edición':'Editar datos'}</button>
+          </div>
         </div>
+      </div>
+      <div class="edit-panel ${editandoId===v.id?'show':''}" id="edit_${v.id}">
+        ${editandoId===v.id ? renderFormEdicion(v) : ''}
       </div>
     </div>`;
   }).join('');
+}
+
+function renderFormEdicion(v){
+  categoriasEdicion = Object.entries(v.comisiones_categoria || {}).map(([categoria, pct]) => ({categoria, pct}));
+  return `
+    <div class="row">
+      <div class="field"><label>Nombre</label><input id="e_nombre" value="${v.nombre}"></div>
+      <div class="field"><label>Comisión default (%)</label><input id="e_comision" type="number" step="0.1" value="${v.comision_pct}"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Teléfono</label><input id="e_telefono" value="${v.telefono||''}"></div>
+      <div class="field"><label>Email</label><input id="e_email" value="${v.email||''}"></div>
+    </div>
+    <div class="row">
+      <div class="field full"><label>Ubicación / zona</label><input id="e_ubicacion" value="${v.ubicacion||''}"></div>
+    </div>
+    <div class="row">
+      <div class="field full"><label>Notas</label><input id="e_notas" value="${v.notas||''}"></div>
+    </div>
+    <label style="display:block;margin-bottom:8px;">Comisión distinta por categoría (opcional — lo que no se liste usa el default de arriba)</label>
+    <div id="catList_${v.id}">${categoriasEdicion.map((c,i)=>filaCategoriaHtml(v.id,i,c)).join('')}</div>
+    <button class="link-btn" onclick="agregarFilaCategoria('${v.id}')">+ Agregar categoría</button>
+    <div style="margin-top:16px;">
+      <button class="btn" onclick="guardarEdicion('${v.id}')">Guardar cambios</button>
+      <span class="status" id="editStatus_${v.id}"></span>
+    </div>`;
+}
+
+function filaCategoriaHtml(vendedorId, i, c){
+  const opciones = categoriasDisponibles().map(cat => `<option value="${cat}" ${cat===c.categoria?'selected':''}>${cat}</option>`).join('');
+  return `
+    <div class="cat-row" data-idx="${i}">
+      <select onchange="categoriasEdicion[${i}].categoria=this.value">${opciones}</select>
+      <input type="number" step="0.1" value="${c.pct}" placeholder="%" oninput="categoriasEdicion[${i}].pct=parseFloat(this.value)||0">
+      <button class="rm-cat" onclick="quitarFilaCategoria('${vendedorId}', ${i})">✕</button>
+    </div>`;
+}
+
+function agregarFilaCategoria(vendedorId){
+  const cats = categoriasDisponibles();
+  if(!cats.length) return;
+  categoriasEdicion.push({ categoria: cats[0], pct: 0 });
+  document.getElementById('catList_'+vendedorId).innerHTML = categoriasEdicion.map((c,i)=>filaCategoriaHtml(vendedorId,i,c)).join('');
+}
+function quitarFilaCategoria(vendedorId, i){
+  categoriasEdicion.splice(i,1);
+  document.getElementById('catList_'+vendedorId).innerHTML = categoriasEdicion.map((c,ix)=>filaCategoriaHtml(vendedorId,ix,c)).join('');
+}
+
+function toggleEditar(id){
+  editandoId = editandoId === id ? null : id;
+  renderLista();
+}
+
+async function guardarEdicion(id){
+  const v = vendedores.find(x => x.id === id);
+  const statusEl = document.getElementById('editStatus_'+id);
+  const nombreNuevo = document.getElementById('e_nombre').value.trim();
+  if(!nombreNuevo){ statusEl.textContent = 'Falta el nombre'; statusEl.className='status err'; return; }
+
+  const comisiones_categoria = {};
+  categoriasEdicion.forEach(c => { if(c.categoria) comisiones_categoria[c.categoria] = c.pct; });
+
+  Object.assign(v, {
+    nombre: nombreNuevo,
+    comision_pct: parseFloat(document.getElementById('e_comision').value) || 0,
+    telefono: document.getElementById('e_telefono').value.trim(),
+    email: document.getElementById('e_email').value.trim(),
+    ubicacion: document.getElementById('e_ubicacion').value.trim(),
+    notas: document.getElementById('e_notas').value.trim(),
+    comisiones_categoria,
+  });
+
+  try{
+    await ghPut('data/vendedores.json', vendedores, `Editar vendedor: ${v.nombre}`);
+    editandoId = null;
+    renderRanking();
+    renderLista();
+  }catch(e){ statusEl.textContent = 'Error: ' + e.message; statusEl.className='status err'; }
 }
 
 async function registrarPago(vendedorId, pendienteSugerido){
@@ -208,7 +309,7 @@ async function toggleActivo(id){
   const v = vendedores.find(x => x.id === id);
   v.activo = !v.activo;
   try{
-    await ghPut('data/vendedores.json', vendedores, `${v.activo?'Reactivar':'Desactivar'} vendedor: ${v.nombre}`);
+    await ghPut('data/vendedores.json', vendedores, `${v.activo?'Reactivar':'Dar de baja'} vendedor: ${v.nombre}`);
     renderLista();
   }catch(e){ setStatus('Error: ' + e.message, true); }
 }
@@ -230,6 +331,7 @@ async function guardarVendedor(){
       email: document.getElementById('email').value.trim(),
       ubicacion: document.getElementById('ubicacion').value.trim(),
       comision_pct: parseFloat(document.getElementById('comisionPct').value) || 0,
+      comisiones_categoria: {},
       activo: true,
       fecha_alta: new Date().toISOString().slice(0,10),
       notas: document.getElementById('notas').value.trim(),
@@ -238,6 +340,7 @@ async function guardarVendedor(){
     await ghPut('data/vendedores.json', vendedores, `Alta vendedor: ${nombre}`);
     setStatus('✓ Vendedor dado de alta — copia su link de venta abajo', false);
     document.querySelectorAll('.card input').forEach(i => i.value = '');
+    renderRanking();
     renderLista();
   }catch(e){ setStatus('Error: ' + e.message, true); }
   finally{ btn.disabled = false; }
