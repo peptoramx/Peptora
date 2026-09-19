@@ -6,7 +6,7 @@
     "email": "",
     "ubicacion": "",
     "comision_pct": 0,
-    "activo": true,
+    "activo": false,
     "fecha_alta": "2026-09-15",
     "notas": "Hermana"
   }
