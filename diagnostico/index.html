@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Peptora — Diagnóstico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/theme.css?v=4">
+<link rel="icon" href="../favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/icon-32.png">
+<meta name="theme-color" content="#A8863C">
+<style>
+  .step{border:1px solid var(--line-strong);border-radius:6px;padding:16px 18px;margin-bottom:12px;}
+  .step .h{font-weight:800;font-size:13px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;}
+  .step .r{font-size:12.5px;color:var(--ink-soft);white-space:pre-wrap;word-break:break-word;}
+  .pill{font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;}
+  .pill.ok{background:var(--positive-soft);color:var(--positive);}
+  .pill.fail{background:var(--critical-soft);color:var(--critical);}
+  .pill.wait{background:var(--gold-soft);color:var(--gold);}
+  .tokenshow{font-size:13px;background:var(--paper-2);border:1px solid var(--line-strong);border-radius:4px;padding:10px 12px;margin-bottom:16px;word-break:break-all;}
+</style>
+</head>
+<body>
+<div class="form-wrap">
+  <a href="../" class="back">← dashboard</a>
+  <header>
+    <div class="eyebrow">Peptora · diagnóstico</div>
+    <h1>Probar mi token</h1>
+    <p>Prueba en vivo, contra el repositorio real, con el token que tienes guardado ahora mismo en este navegador.</p>
+  </header>
+
+  <div class="card">
+    <h2>Token guardado ahora mismo</h2>
+    <div class="tokenshow" id="tokenShow">— sin token guardado —</div>
+    <div class="row">
+      <div class="field full"><label>Pegar / reemplazar token</label><input id="tokenInput" type="password" placeholder="github_pat_..."></div>
+    </div>
+    <button class="btn" onclick="guardarToken()">Guardar este token</button>
+  </div>
+
+  <div class="card">
+    <h2>Prueba en vivo</h2>
+    <button class="btn ghost" style="width:100%;margin-bottom:14px;" onclick="correrPrueba()">Probar ahora</button>
+    <div id="resultados"></div>
+  </div>
+</div>
+
+<script>
+const REPO = 'peptoramx/Peptora';
+const API = `https://api.github.com/repos/${REPO}`;
+
+function getToken(){ return localStorage.getItem('peptora_token'); }
+function mostrarTokenActual(){
+  const t = getToken();
+  document.getElementById('tokenShow').textContent = t
+    ? `${t.slice(0,14)}…${t.slice(-8)}  (${t.length} caracteres)`
+    : '— sin token guardado —';
+}
+function guardarToken(){
+  const t = document.getElementById('tokenInput').value.trim();
+  if(!t) return;
+  localStorage.setItem('peptora_token', t);
+  document.getElementById('tokenInput').value = '';
+  mostrarTokenActual();
+}
+
+function pasoEl(id, titulo){
+  return `<div class="step" id="${id}">
+    <div class="h"><span>${titulo}</span><span class="pill wait" id="${id}_pill">…</span></div>
+    <div class="r" id="${id}_r"></div>
+  </div>`;
+}
+function marcar(id, ok, texto){
+  document.getElementById(id+'_pill').textContent = ok ? '✓ OK' : '✗ FALLA';
+  document.getElementById(id+'_pill').className = 'pill ' + (ok ? 'ok' : 'fail');
+  document.getElementById(id+'_r').textContent = texto;
+}
+
+async function correrPrueba(){
+  const token = getToken();
+  const el = document.getElementById('resultados');
+  el.innerHTML = pasoEl('p1','1. Token guardado en este navegador') + pasoEl('p2','2. Acceso de lectura al repo') + pasoEl('p3','3. Acceso de escritura (prueba real)');
+
+  if(!token){
+    marcar('p1', false, 'No hay ningún token guardado aquí. Pégalo arriba primero.');
+    marcar('p2', false, 'omitido');
+    marcar('p3', false, 'omitido');
+    return;
+  }
+  marcar('p1', true, `Longitud: ${token.length} caracteres. Termina en: …${token.slice(-8)}`);
+
+  // Paso 2: lectura
+  let permisos = null;
+  try{
+    const res = await fetch(API, { headers:{ 'Authorization':`Bearer ${token}`, 'Accept':'application/vnd.github+json' } });
+    const data = await res.json();
+    if(res.ok){
+      permisos = data.permissions;
+      marcar('p2', true, `Repo: ${data.full_name}\nPermisos de tu cuenta sobre el repo: ${JSON.stringify(permisos)}`);
+    } else {
+      marcar('p2', false, `HTTP ${res.status}: ${JSON.stringify(data)}`);
+      marcar('p3', false, 'omitido — falló la lectura');
+      return;
+    }
+  }catch(e){
+    marcar('p2', false, 'Error de red: ' + e.message);
+    marcar('p3', false, 'omitido');
+    return;
+  }
+
+  // Paso 3: escritura real (crea y borra un archivo de prueba)
+  const testPath = 'data/_diagnostico_temp.txt';
+  try{
+    const putRes = await fetch(`${API}/contents/${testPath}`, {
+      method:'PUT',
+      headers:{ 'Authorization':`Bearer ${token}`, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json' },
+      body: JSON.stringify({ message:'Diagnóstico: prueba de escritura', content: btoa('ok'), branch:'main' })
+    });
+    const putData = await putRes.json();
+    if(!putRes.ok){
+      marcar('p3', false, `HTTP ${putRes.status}: ${JSON.stringify(putData)}\n\nEsto es exactamente lo que te está bloqueando. El token de arriba NO tiene permiso real de escritura sobre este repo, aunque diga que sí en GitHub.`);
+      return;
+    }
+    // borrar el archivo de prueba de inmediato
+    await fetch(`${API}/contents/${testPath}`, {
+      method:'DELETE',
+      headers:{ 'Authorization':`Bearer ${token}`, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json' },
+      body: JSON.stringify({ message:'Diagnóstico: limpieza', sha: putData.content.sha, branch:'main' })
+    });
+    marcar('p3', true, 'Se creó y se borró un archivo de prueba real en el repo. La escritura SÍ funciona con este token, en este navegador, ahora mismo.');
+  }catch(e){
+    marcar('p3', false, 'Error de red: ' + e.message);
+  }
+}
+
+mostrarTokenActual();
+</script>
+</body>
+</html>
