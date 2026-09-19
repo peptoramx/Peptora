@@ -84,6 +84,8 @@
     "con_descuento": false,
     "descuento_pct": 0,
     "cortesia": false,
-    "grupo_id": "venta_grp_1789776335834"
+    "grupo_id": "venta_grp_1789776335834",
+    "cancelada": true,
+    "fecha_cancelacion": "2026-09-19T00:06:02.596Z"
   }
 ]
