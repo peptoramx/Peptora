@@ -145,7 +145,10 @@ function renderForm(){
 
   const sel = document.getElementById('loteSelect');
   sel.innerHTML = '<option value="">— seleccionar —</option>' +
-    mias.map(c => `<option value="${c.id}">${c.producto_nombre} — ${c.cantidad_pendiente} ${c.tipo} contigo</option>`).join('');
+    mias.map(c => {
+      const concMg = c.concentracion_mg || (lotes.find(l=>l.id===c.lote_id)||{}).concentracion_mg;
+      return `<option value="${c.id}">${c.producto_nombre}${concMg?' '+concMg+'mg':''} — ${c.cantidad_pendiente} ${c.tipo} contigo</option>`;
+    }).join('');
   sel.addEventListener('change', onLoteChange);
 }
 
@@ -171,7 +174,8 @@ function agregarAlCarrito(){
   const precioLista = c.tipo === 'caja' ? (l.precio_venta_caja||0) : (l.precio_venta_vial||0);
   const esCortesia = document.getElementById('cortesiaChk').checked;
   const precioUnit = esCortesia ? 0 : precioLista;
-  carrito.push({ consignacion_id: c.id, lote_id:c.lote_id, producto_id:l.producto_id, producto_nombre:c.producto_nombre, tipo:c.tipo, cantidad,
+  const concMg = c.concentracion_mg || l.concentracion_mg || 0;
+  carrito.push({ consignacion_id: c.id, lote_id:c.lote_id, producto_id:l.producto_id, producto_nombre:c.producto_nombre, concentracion_mg: concMg, tipo:c.tipo, cantidad,
     precioUnit, precioLista, esCortesia, imagen_url: l.imagen_url || '', subtotal:precioUnit*cantidad, subtotalLista:precioLista*cantidad });
   document.getElementById('cantidad').value = 1;
   document.getElementById('cortesiaChk').checked = false;
@@ -192,7 +196,7 @@ function renderCarrito(){
     <div class="cart-item">
       <div style="display:flex;align-items:center;gap:9px;">
         ${c.imagen_url ? `<img src="../${c.imagen_url}" style="width:30px;height:30px;object-fit:cover;border-radius:2px;border:1px solid var(--line-strong);flex-shrink:0;">` : ''}
-        <div><div class="n">${c.producto_nombre}${c.esCortesia?' <span class="badge amber" style="font-size:9px;">CORTESÍA</span>':''}</div><div class="meta">${c.tipo}</div></div>
+        <div><div class="n">${c.producto_nombre}${c.concentracion_mg?' '+c.concentracion_mg+'mg':''}${c.esCortesia?' <span class="badge amber" style="font-size:9px;">CORTESÍA</span>':''}</div><div class="meta">${c.tipo}</div></div>
       </div>
       <div class="cell-mono">${c.cantidad} × ${formatMoneda(c.precioUnit)}</div>
       <div class="cell-mono strong">${formatMoneda(promo.items[i].total_linea)}</div>
