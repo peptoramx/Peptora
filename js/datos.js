@@ -146,14 +146,37 @@ function ventasDeVendedor(ventas, vendedorId){
   return ventasActivas(ventas).filter(v => v.vendedor_id === vendedorId);
 }
 
-function comisionVendedor(ventas, vendedor, pagos){
-  pagos = pagos || [];
+// Categoria del producto vendido en esa venta (via lote -> producto -> categoria).
+function categoriaDeVenta(v, lotesPorId, productosPorId){
+  const l = lotesPorId[v.lote_id];
+  if(!l) return null;
+  const p = productosPorId[l.producto_id];
+  return p ? p.categoria : null;
+}
+
+// Comision por vendedor: usa comisiones_categoria[categoria] si esta definido para esa categoria,
+// si no cae al comision_pct por default del vendedor. lotes/productos son opcionales
+// (si no se mandan, todo usa el % default, igual que antes).
+function comisionVendedor(ventas, vendedor, pagos, lotes, productos){
+  pagos = pagos || []; lotes = lotes || []; productos = productos || [];
   const propias = ventasDeVendedor(ventas, vendedor.id);
-  const totalVendido = propias.reduce((s,v) => s + (v.precio_vendido||0), 0);
-  const comision = totalVendido * (vendedor.comision_pct||0) / 100;
+  const lotesPorId = Object.fromEntries(lotes.map(l => [l.id, l]));
+  const productosPorId = Object.fromEntries(productos.map(p => [p.id, p]));
+  const overrides = vendedor.comisiones_categoria || {};
+
+  let totalVendido = 0, comisionTotal = 0;
+  propias.forEach(v => {
+    const monto = v.precio_vendido || 0;
+    totalVendido += monto;
+    const cat = categoriaDeVenta(v, lotesPorId, productosPorId);
+    const pct = (cat && overrides[cat] != null) ? overrides[cat] : (vendedor.comision_pct || 0);
+    comisionTotal += monto * pct / 100;
+  });
+  comisionTotal = Math.round(comisionTotal * 100) / 100;
+
   const pagado = pagos.filter(p => p.vendedor_id === vendedor.id).reduce((s,p) => s + (p.monto||0), 0);
-  const pendiente = comision - pagado;
-  return { totalVendido, comision, numVentas: propias.length, pagado, pendiente };
+  const pendiente = Math.round((comisionTotal - pagado) * 100) / 100;
+  return { totalVendido, comision: comisionTotal, numVentas: propias.length, pagado, pendiente };
 }
 
 // Reparte, PROPORCIONALMENTE AL SUBTOTAL, un descuento en % que el usuario escribe a mano para esa venta.
