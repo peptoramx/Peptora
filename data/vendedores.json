@@ -23,7 +23,12 @@
     "email": "fkatawra@gmail.com",
     "ubicacion": "Hermosillo, Sonora",
     "comision_pct": 0,
-    "comisiones_categoria": {},
+    "comisiones_categoria": {
+      "Insumos": 10,
+      "NAD+ / Longevidad": 15,
+      "Nootrópicos": 20,
+      "Péptidos": 15
+    },
     "activo": true,
     "fecha_alta": "2026-09-19",
     "notas": "Hermana"
