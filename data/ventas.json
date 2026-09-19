@@ -71,5 +71,19 @@
     "grupo_id": "venta_grp_1789535230006",
     "cancelada": true,
     "fecha_cancelacion": "2026-09-16T05:07:32.166Z"
+  },
+  {
+    "id": "venta_1789776335834_0",
+    "lote_id": "lote_004",
+    "producto_nombre": "KLOW",
+    "fecha": "2026-09-19T00:05:35.834Z",
+    "tipo_venta": "vial",
+    "cantidad": 1,
+    "precio_vendido": 3500,
+    "precio_lista": 3500,
+    "con_descuento": false,
+    "descuento_pct": 0,
+    "cortesia": false,
+    "grupo_id": "venta_grp_1789776335834"
   }
 ]
