@@ -22,5 +22,17 @@
     "cantidad_entregada": 1,
     "cantidad_pendiente": 0,
     "fecha_entrega": "2026-09-19T04:06:52.250Z"
+  },
+  {
+    "id": "consig_1789794734712",
+    "vendedor_id": "vend_fabiola-katawra",
+    "vendedor_nombre": "Fabiola Katawra",
+    "lote_id": "lote_001",
+    "producto_nombre": "Retatrutida",
+    "lote_codigo": "z51-z14",
+    "tipo": "vial",
+    "cantidad_entregada": 5,
+    "cantidad_pendiente": 5,
+    "fecha_entrega": "2026-09-19T05:12:14.712Z"
   }
 ]
