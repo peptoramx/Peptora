@@ -141,7 +141,7 @@
     "viales_por_caja": 10,
     "costo_por_vial": 14.6,
     "precio_venta_caja": 1500,
-    "precio_venta_vial": 150,
+    "precio_venta_vial": 250,
     "stock_cajas": 0,
     "stock_viales": 64,
     "imagen_url": ""
