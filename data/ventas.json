@@ -89,5 +89,19 @@
     "grupo_id": "venta_grp_1789776335834",
     "cancelada": true,
     "fecha_cancelacion": "2026-09-19T00:06:02.596Z"
+  },
+  {
+    "id": "venta_1789935404453_0",
+    "lote_id": "lote_016",
+    "producto_nombre": "BPC-157 + TB-500",
+    "fecha": "2026-09-20T20:16:44.453Z",
+    "tipo_venta": "vial",
+    "cantidad": 12,
+    "precio_vendido": 0,
+    "precio_lista": 20400,
+    "con_descuento": true,
+    "descuento_pct": 100,
+    "cortesia": true,
+    "grupo_id": "venta_grp_1789935404450"
   }
 ]
