@@ -68,5 +68,10 @@
     "id": "prod_bpc-157-tb-500",
     "nombre": "BPC-157 + TB-500",
     "categoria": "Péptidos"
+  },
+  {
+    "id": "prod_bpc-157",
+    "nombre": "BPC-157",
+    "categoria": "Peptido"
   }
 ]
