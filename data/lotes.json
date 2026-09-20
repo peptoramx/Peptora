@@ -397,5 +397,26 @@
     "stock_cajas": 2,
     "stock_viales": 0,
     "imagen_url": ""
+  },
+  {
+    "id": "lote_1789934857467",
+    "producto_id": "prod_ghk-cu",
+    "producto_nombre": "GHK-CU",
+    "proveedor_id": "prov_bodega-mx-camila",
+    "proveedor_nombre": "Bodega MX/Camila",
+    "concentracion_mg": 50,
+    "lote": "L200926",
+    "fecha_adquisicion": "2026-09-20",
+    "fecha_caducidad": "2028-09-21",
+    "costo_compra_caja": 1000,
+    "descuento_pct": 0,
+    "costo_neto_caja": 1000,
+    "viales_por_caja": 10,
+    "costo_por_vial": 100,
+    "precio_venta_caja": 0,
+    "precio_venta_vial": 1150,
+    "stock_cajas": 1,
+    "stock_viales": 0,
+    "imagen_url": ""
   }
 ]
