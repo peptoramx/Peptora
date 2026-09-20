@@ -8,7 +8,9 @@
     "cantidad": 12,
     "precio_vendido": 6120,
     "con_descuento": true,
-    "descuento_pct": 70
+    "descuento_pct": 70,
+    "cancelada": true,
+    "fecha_cancelacion": "2026-09-20T20:16:03.707Z"
   },
   {
     "id": "venta_1789534510345_0",
