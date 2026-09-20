@@ -355,5 +355,26 @@
     "stock_cajas": 2,
     "stock_viales": 0,
     "imagen_url": ""
+  },
+  {
+    "id": "lote_1789934695518",
+    "producto_id": "prod_terzipatida",
+    "producto_nombre": "Terzipatida",
+    "proveedor_id": "prov_bodega-mx-camila",
+    "proveedor_nombre": "Bodega MX/Camila",
+    "concentracion_mg": 20,
+    "lote": "L200926",
+    "fecha_adquisicion": "2026-09-20",
+    "fecha_caducidad": "2028-09-20",
+    "costo_compra_caja": 2100,
+    "descuento_pct": 0,
+    "costo_neto_caja": 2100,
+    "viales_por_caja": 10,
+    "costo_por_vial": 210,
+    "precio_venta_caja": 0,
+    "precio_venta_vial": 2200,
+    "stock_cajas": 2,
+    "stock_viales": 0,
+    "imagen_url": ""
   }
 ]
