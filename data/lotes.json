@@ -334,5 +334,26 @@
     "stock_cajas": 0,
     "stock_viales": 18,
     "imagen_url": ""
+  },
+  {
+    "id": "lote_1789934559442",
+    "producto_id": "prod_retatrutida",
+    "producto_nombre": "Retatrutida",
+    "proveedor_id": "prov_bodega-mx-camila",
+    "proveedor_nombre": "Bodega MX/Camila",
+    "concentracion_mg": 10,
+    "lote": "L09202026",
+    "fecha_adquisicion": "2026-09-20",
+    "fecha_caducidad": "2028-09-20",
+    "costo_compra_caja": 2300,
+    "descuento_pct": 0,
+    "costo_neto_caja": 2300,
+    "viales_por_caja": 10,
+    "costo_por_vial": 230,
+    "precio_venta_caja": 0,
+    "precio_venta_vial": 2200,
+    "stock_cajas": 2,
+    "stock_viales": 0,
+    "imagen_url": ""
   }
 ]
