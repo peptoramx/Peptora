@@ -6,7 +6,7 @@
 <title>Peptora — Inventario</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/theme.css?v=4">
+<link rel="stylesheet" href="css/theme.css?v=5">
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/icon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/icon-16.png">
@@ -209,8 +209,8 @@ function renderLotTable(lotes){
     return `
       <div class="lot-row">
         <div class="status-dot ${estado==='teal'?'':estado}"></div>
-        <div style="display:flex;align-items:center;gap:10px;">
-          ${l.imagen_url ? `<img src="${l.imagen_url}" style="width:34px;height:34px;object-fit:cover;border-radius:2px;border:1px solid var(--hairline);flex-shrink:0;">` : ''}
+        <div class="prod-box">
+          ${l.imagen_url ? `<img src="${l.imagen_url}" style="width:34px;height:34px;object-fit:cover;border-radius:2px;border:1px solid var(--ink);flex-shrink:0;">` : `<div class="prod-swatch">${(l.producto_nombre||'?').charAt(0)}</div>`}
           <div><div class="prod-name">${l.producto_nombre}</div><div class="prod-meta">${l.viales_por_caja} viales/caja${l.concentracion_mg?' · '+l.concentracion_mg+'mg':''}</div></div>
         </div>
         <div class="cell-mono" data-label="Proveedor">${l.proveedor_nombre||'—'}</div>
