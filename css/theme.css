@@ -115,6 +115,19 @@ a{color:inherit;}
 .bar-fill{height:100%;background:var(--gold);}
 .bar-row .amt{font-size:11.5px;color:var(--ink-soft);width:68px;text-align:right;flex-shrink:0;font-weight:600;}
 
+/* ---------- Caja de producto (contraste negro dentro de la fila) ---------- */
+.prod-box{
+  display:flex;align-items:center;gap:10px;
+  border:1.5px solid var(--ink);border-radius:4px;
+  padding:6px 10px;background:var(--paper);
+}
+.prod-swatch{
+  width:34px;height:34px;border-radius:2px;flex-shrink:0;
+  background:var(--ink);color:var(--paper);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Archivo Black',sans-serif;font-size:14px;
+}
+
 /* ---------- Encabezado / botones ---------- */
 .page-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px;gap:12px;flex-wrap:wrap;}
 .page-head h1{font-family:'Archivo Black',sans-serif;font-size:21px;margin:0 0 5px;color:var(--ink);}
