@@ -460,5 +460,26 @@
     "stock_cajas": 0,
     "stock_viales": 6,
     "imagen_url": ""
+  },
+  {
+    "id": "lote_1790557827980",
+    "producto_id": "prod_bac-water-3ml",
+    "producto_nombre": "Bac Water 3ml",
+    "proveedor_id": "prov_bodega-mx-camila",
+    "proveedor_nombre": "Bodega MX/Camila",
+    "concentracion_mg": 0,
+    "lote": "L160926",
+    "fecha_adquisicion": "2026-09-16",
+    "fecha_caducidad": "2028-09-16",
+    "costo_compra_caja": 280,
+    "descuento_pct": 0,
+    "costo_neto_caja": 280,
+    "viales_por_caja": 10,
+    "costo_por_vial": 28,
+    "precio_venta_caja": 0,
+    "precio_venta_vial": 250,
+    "stock_cajas": 0,
+    "stock_viales": 0,
+    "imagen_url": ""
   }
 ]
