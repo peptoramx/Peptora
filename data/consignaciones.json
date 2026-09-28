@@ -259,5 +259,18 @@
     "cantidad_entregada": 4,
     "cantidad_pendiente": 4,
     "fecha_entrega": "2026-09-28T01:05:22.078Z"
+  },
+  {
+    "id": "consig_1790557544762",
+    "vendedor_id": "vend_dulce-katawra",
+    "vendedor_nombre": "Dulce Katawra",
+    "lote_id": "lote_001",
+    "producto_nombre": "Retatrutida",
+    "concentracion_mg": 20,
+    "lote_codigo": "z51-z14",
+    "tipo": "vial",
+    "cantidad_entregada": 5,
+    "cantidad_pendiente": 5,
+    "fecha_entrega": "2026-09-28T01:05:44.762Z"
   }
 ]
