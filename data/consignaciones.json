@@ -207,5 +207,18 @@
     "cantidad_entregada": 4,
     "cantidad_pendiente": 4,
     "fecha_entrega": "2026-09-28T01:04:18.434Z"
+  },
+  {
+    "id": "consig_1790557472361",
+    "vendedor_id": "vend_dulce-katawra",
+    "vendedor_nombre": "Dulce Katawra",
+    "lote_id": "lote_1789934857467",
+    "producto_nombre": "GHK-CU",
+    "concentracion_mg": 50,
+    "lote_codigo": "L200926",
+    "tipo": "vial",
+    "cantidad_entregada": 4,
+    "cantidad_pendiente": 4,
+    "fecha_entrega": "2026-09-28T01:04:32.362Z"
   }
 ]
