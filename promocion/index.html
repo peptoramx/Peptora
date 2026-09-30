@@ -5,13 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Peptora — Promoción</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/theme.css?v=5">
-<link rel="icon" href="../favicon.ico" sizes="any">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/theme.css?v=20260930">
 <link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/icon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="../assets/icons/icon-180.png">
 <link rel="manifest" href="../site.webmanifest">
-<meta name="theme-color" content="#0EA99B">
+<meta name="theme-color" content="#102a3a">
 <style>
   .switch-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;}
   .switch{position:relative;width:46px;height:26px;flex-shrink:0;}
@@ -24,12 +23,12 @@
 </head>
 <body>
 <div class="form-wrap">
-  <a href="../" class="back">← dashboard</a>
+  <a href="../" class="back">← Inicio</a>
   <a href="#" onclick="localStorage.removeItem('peptora_token'); location.reload(); return false;" class="back" style="float:right;">cambiar token</a>
   <header>
     <div class="eyebrow">Peptora · configuración</div>
     <h1>Promoción por volumen</h1>
-    <p>Se aplica sola en /venta-rapida/ y /venta-vendedor/ cuando está activa — nada corre si la dejas apagada.</p>
+    <p>Configuración de referencia para promociones por volumen. En las ventas, el descuento se captura manualmente.</p>
   </header>
 
   <div class="token-bar" id="tokenBar">
@@ -55,7 +54,7 @@
   </div>
 </div>
 
-<script src="../js/datos.js?v=4"></script>
+<script src="../js/datos.js?v=20260930"></script>
 <script>
 const REPO = 'peptoramx/Peptora';
 const API = `https://api.github.com/repos/${REPO}/contents`;
@@ -124,5 +123,6 @@ async function guardar(){
 
 if(ensureToken()) init();
 </script>
+<script src="../js/ui.js?v=20260930"></script>
 </body>
 </html>

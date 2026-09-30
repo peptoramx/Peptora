@@ -5,37 +5,36 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Peptora — Popularidad de productos</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/theme.css?v=5">
-<link rel="icon" href="../favicon.ico" sizes="any">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/theme.css?v=20260930">
 <link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/icon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="../assets/icons/icon-180.png">
 <link rel="manifest" href="../site.webmanifest">
-<meta name="theme-color" content="#0EA99B">
+<meta name="theme-color" content="#102a3a">
 <style>
   .pop-row{display:grid;grid-template-columns:24px 1.6fr 2fr 90px auto;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);}
   .pop-row:last-child{border-bottom:none;}
-  .pop-row .rank{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
+  .pop-row .rank{font-family:'Archivo',Arial,sans-serif;font-size:11px;color:var(--muted);}
   .pop-row .name{font-weight:600;font-size:13px;}
   .pop-bar-track{height:8px;background:var(--surface-alt);border-radius:4px;overflow:hidden;}
   .pop-bar-fill{height:100%;background:var(--teal);}
   .pop-bar-fill.rezagado{background:var(--amber);}
-  .pop-row .amt{font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;}
+  .pop-row .amt{font-family:'Archivo',Arial,sans-serif;font-size:12px;text-align:right;}
 </style>
 </head>
 <body>
 <div class="form-wrap" style="max-width:760px;">
-  <a href="../" class="back">← dashboard</a>
+  <a href="../" class="back">← Inicio</a>
   <a href="#" onclick="localStorage.removeItem('peptora_token'); location.reload(); return false;" class="back" style="float:right;">cambiar token</a>
   <header>
     <div class="eyebrow">Peptora · reportes</div>
     <h1>Popularidad de productos</h1>
-    <p>Unidades vendidas históricas por producto. Ámbar = candidato a promoción (último 25% o sin ventas).</p>
+    <p>Unidades vendidas por producto, con el historial anterior convertido a viales. Ámbar = candidato a promoción (último 25% o sin ventas).</p>
   </header>
   <div class="card" id="listaPopularidad"><div class="empty">Cargando…</div></div>
 </div>
 
-<script src="../js/datos.js?v=4"></script>
+<script src="../js/datos.js?v=20260930"></script>
 <script>
 window.RUTA_DATOS_BASE = '../';
 
@@ -60,5 +59,6 @@ async function init(){
 }
 init();
 </script>
+<script src="../js/ui.js?v=20260930"></script>
 </body>
 </html>

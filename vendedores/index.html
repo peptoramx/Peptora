@@ -5,13 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Peptora — Vendedores</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/theme.css?v=5">
-<link rel="icon" href="../favicon.ico" sizes="any">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/theme.css?v=20260930">
 <link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/icon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="../assets/icons/icon-180.png">
 <link rel="manifest" href="../site.webmanifest">
-<meta name="theme-color" content="#A8863C">
+<meta name="theme-color" content="#102a3a">
 <style>
   .vend-card{background:var(--surface);border:1px solid var(--line-strong);border-radius:6px;padding:18px 20px;margin-bottom:12px;}
   .vend-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;}
@@ -34,7 +33,7 @@
 </head>
 <body>
 <div class="form-wrap" style="max-width:820px;">
-  <a href="../" class="back">← dashboard</a>
+  <a href="../" class="back">← Inicio</a>
   <a href="#" onclick="localStorage.removeItem('peptora_token'); location.reload(); return false;" class="back" style="float:right;">cambiar token</a>
   <header>
     <div class="eyebrow">Peptora · vendedores externos</div>
@@ -74,7 +73,7 @@
   <div id="listaVendedores"></div>
 </div>
 
-<script src="../js/datos.js?v=4"></script>
+<script src="../js/datos.js?v=20260930"></script>
 <script>
 const REPO = 'peptoramx/Peptora';
 const API = `https://api.github.com/repos/${REPO}/contents`;
@@ -100,7 +99,8 @@ async function ghGetRaw(path){
   if(!res.ok) throw new Error(`GET ${path} -> ${res.status}`);
   const json = await res.json();
   shaCache[path] = json.sha;
-  return JSON.parse(decodeURIComponent(escape(atob(json.content))) || '[]');
+  const datos=JSON.parse(decodeURIComponent(escape(atob(json.content))) || '[]');
+  return path==='data/lotes.json' ? datos.map(normalizarLote) : datos;
 }
 async function ghPut(path, dataArr, msg){
   const content = btoa(unescape(encodeURIComponent(JSON.stringify(dataArr, null, 2))));
@@ -132,7 +132,8 @@ async function init(){
       ghGetRaw('data/lotes.json'),
       ghGetRaw('data/productos.json'),
     ]);
-    try{ pagos = await ghGetRaw('data/pagos_comisiones.json'); }catch(e){ pagos = []; }
+    try{ pagos = await ghGetRaw('data/pagos_comisiones.json'); }catch(e){ if(!e.message.endsWith('-> 404')) throw e; pagos = []; }
+    ventas=normalizarVentas(ventas,lotes);
     renderRanking();
     renderLista();
   }catch(e){ setStatus('Error cargando datos: ' + e.message, true); }
@@ -348,5 +349,6 @@ async function guardarVendedor(){
 
 if(ensureToken()) init();
 </script>
+<script src="../js/ui.js?v=20260930"></script>
 </body>
 </html>

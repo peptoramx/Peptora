@@ -5,23 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Peptora — Nuevo Lote</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/theme.css?v=5">
-<link rel="icon" href="../favicon.ico" sizes="any">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/theme.css?v=20260930">
 <link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/icon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="../assets/icons/icon-16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="../assets/icons/icon-180.png">
 <link rel="manifest" href="../site.webmanifest">
-<meta name="theme-color" content="#0EA99B">
+<meta name="theme-color" content="#102a3a">
 </head>
 <body>
 <div class="form-wrap">
-  <a href="../" class="back">← dashboard</a>
+  <a href="../" class="back">← Inicio</a>
   <a href="#" onclick="localStorage.removeItem('peptora_token'); location.reload(); return false;" class="back" style="float:right;">cambiar token</a>
   <header>
-    <div class="eyebrow">Peptora · captura directa</div>
+    <div class="eyebrow">PEPTORA · inventario</div>
     <h1>Alta de lote</h1>
-    <p>Escribe directo a <span class="mono">data/lotes.json</span> vía GitHub API. Sin pasar por admin.</p>
+    <p>Registra producto, proveedor, existencias, costos y precios en un solo lugar.</p>
   </header>
 
   <div class="token-bar" id="tokenBar">
@@ -39,7 +38,7 @@
         </select>
         <button class="link-btn" onclick="toggleNuevoProducto()">+ Producto nuevo</button>
         <div class="new-inline" id="nuevoProductoBox">
-          <input id="nuevoProductoNombre" placeholder="Nombre del producto">
+          <input id="nuevoProductoNombre" placeholder="Nombre del producto" oninput="actualizarCriterios()">
           <input id="nuevoProductoCategoria" placeholder="Categoría (ej. Péptidos)">
         </div>
       </div>
@@ -50,26 +49,17 @@
     </div>
 
     <div class="row">
-      <div class="field">
-        <label>Proveedor</label>
-        <select id="proveedorSelect" onchange="onProveedorChange()">
-          <option value="">Cargando…</option>
-        </select>
-        <button class="link-btn" onclick="toggleNuevoProveedor()">+ Proveedor nuevo</button>
-        <div class="new-inline" id="nuevoProveedorBox">
-          <input id="nuevoProveedorNombre" placeholder="Nombre del proveedor">
-        </div>
-      </div>
+      <div class="field"><label>Proveedor</label><div class="computed">Camila</div><input id="proveedorSelect" type="hidden" value="prov_bodega-mx-camila"></div>
       <div class="field">
         <label>Código de lote</label>
-        <input id="loteCodigo" placeholder="L-2409A">
+        <input id="loteCodigo" readonly placeholder="Se asigna al elegir el producto"><div class="hint">Un mismo producto conserva su código de lote.</div>
       </div>
     </div>
 
     <div class="row">
       <div class="field">
         <label>Fecha de adquisición</label>
-        <input id="fechaAdquisicion" type="date">
+        <input id="fechaAdquisicion" type="date"><div class="hint">Se propone la fecha común del producto; puedes corregirla si es una compra posterior.</div>
       </div>
       <div class="field">
         <label>Fecha de caducidad</label>
@@ -79,58 +69,25 @@
   </div>
 
   <div class="card">
-    <h2>Costos y precios</h2>
+    <h2>Unidades, costo y precio</h2>
     <div class="row">
-      <div class="field">
-        <label>Viales por caja</label>
-        <input id="vialesPorCaja" type="number" placeholder="10" oninput="recalcular()">
-      </div>
-      <div class="field">
-        <label>Cajas iniciales en stock</label>
-        <input id="stockCajas" type="number" placeholder="10">
-      </div>
+      <div class="field"><label for="stockUnidades">Unidades iniciales (viales)</label><input id="stockUnidades" type="number" min="0" step="1" placeholder="20"></div>
+      <div class="field"><label for="costoUnitario">Costo unitario neto</label><input id="costoUnitario" type="number" min="0" step="0.0001" placeholder="118.00" oninput="recalcular()"><div class="hint">Lo que te cuesta cada vial, después de descuentos.</div></div>
     </div>
     <div class="row">
-      <div class="field">
-        <label>Costo de compra por caja</label>
-        <input id="costoCaja" type="number" step="0.01" placeholder="1180.00" oninput="recalcular()">
-      </div>
-      <div class="field">
-        <label>Descuento al adquirir (%)</label>
-        <input id="descuento" type="number" step="0.01" placeholder="12" oninput="recalcular()">
-      </div>
+      <div class="field"><label for="precioVial">Precio de venta por unidad</label><input id="precioVial" type="number" min="0" step="0.01" placeholder="210.00" oninput="recalcular()"></div>
+      <div class="field"><label>Margen por unidad</label><div class="computed" id="margenVial">—</div></div>
     </div>
-    <div class="row">
-      <div class="field">
-        <label>Costo neto por caja</label>
-        <div class="computed" id="costoNeto">$ 0.00</div>
+    <details class="purchase-helper">
+      <summary>¿Compraste cajas? Convertir compra a unidades</summary>
+      <p class="hint">Cada caja contiene 10 viales. Esta ayuda llena las unidades y el costo unitario; el inventario siempre se maneja por unidad.</p>
+      <div class="row">
+        <div class="field"><label for="cajasCompradas">Cajas compradas</label><input id="cajasCompradas" type="number" min="0" step="1" placeholder="2" oninput="convertirCompra()"></div>
+        <div class="field"><label for="costoCompraCaja">Costo de compra por caja</label><input id="costoCompraCaja" type="number" min="0" step="0.01" placeholder="1180.00" oninput="convertirCompra()"></div>
       </div>
-      <div class="field">
-        <label>Costo por vial</label>
-        <div class="computed" id="costoVial">$ 0.00</div>
-      </div>
-    </div>
-    <div class="row">
-      <div class="field">
-        <label>Precio de venta por caja</label>
-        <input id="precioCaja" type="number" step="0.01" placeholder="1950.00" oninput="recalcular()">
-      </div>
-      <div class="field">
-        <label>Precio de venta por vial</label>
-        <input id="precioVial" type="number" step="0.01" placeholder="210.00" oninput="recalcular()">
-      </div>
-    </div>
-    <div class="row">
-      <div class="field">
-        <label>Margen (caja)</label>
-        <div class="computed" id="margenCaja">—</div>
-      </div>
-      <div class="field">
-        <label>Margen (vial)</label>
-        <div class="computed" id="margenVial">—</div>
-      </div>
-    </div>
-    <div class="field full">
+      <div class="row"><div class="field"><label for="descuentoCompra">Descuento de compra (%)</label><input id="descuentoCompra" type="number" min="0" max="100" step="0.1" value="0" oninput="convertirCompra()"></div><div class="field"><label>Conversión</label><div class="computed" id="compraResumen">—</div></div></div>
+    </details>
+    <div class="field full" style="margin-top:20px">
       <label>Imagen del producto (opcional)</label>
       <input id="imagenFile" type="file" accept="image/*">
       <img id="imagenPreview" style="display:none;max-width:140px;margin-top:10px;border:1px solid var(--hairline);border-radius:var(--radius);">
@@ -143,6 +100,8 @@
   </div>
 </div>
 
+<script src="../js/datos.js?v=20260930"></script>
+<script src="../js/transacciones.js?v=20260930"></script>
 <script>
 const REPO = 'peptoramx/Peptora';
 const API = `https://api.github.com/repos/${REPO}/contents`;
@@ -176,7 +135,8 @@ async function ghGet(path){
   const json = await res.json();
   shaCache[path] = json.sha;
   const content = decodeURIComponent(escape(atob(json.content)));
-  return JSON.parse(content || '[]');
+  const datos=JSON.parse(content || '[]');
+  return path==='data/lotes.json' ? datos.map(normalizarLote) : datos;
 }
 
 async function ghPut(path, dataArr, msg){
@@ -244,42 +204,46 @@ function renderSelects(){
   pSel.innerHTML = '<option value="">— seleccionar —</option>' +
     productos.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
 
-  const vSel = document.getElementById('proveedorSelect');
-  vSel.innerHTML = '<option value="">— seleccionar —</option>' +
-    proveedores.map(v => `<option value="${v.id}">${v.nombre}</option>`).join('');
+  actualizarCriterios();
 }
 
 function toggleNuevoProducto(){
   document.getElementById('nuevoProductoBox').classList.toggle('show');
   document.getElementById('productoSelect').value = '';
+  actualizarCriterios();
 }
 function toggleNuevoProveedor(){
   document.getElementById('nuevoProveedorBox').classList.toggle('show');
   document.getElementById('proveedorSelect').value = '';
 }
-function onProductoChange(){ if(document.getElementById('productoSelect').value) document.getElementById('nuevoProductoBox').classList.remove('show'); }
+function onProductoChange(){ if(document.getElementById('productoSelect').value) document.getElementById('nuevoProductoBox').classList.remove('show'); actualizarCriterios(); }
+function actualizarCriterios(){
+  const id=document.getElementById('productoSelect').value;
+  const nombre=(productos.find(p=>p.id===id)?.nombre || document.getElementById('nuevoProductoNombre').value).trim();
+  const existentes=lotes.filter(l=>normalizarBusqueda(l.producto_nombre)===normalizarBusqueda(nombre));
+  document.getElementById('loteCodigo').value=nombre ? (existentes[0]?.lote || 'PEP-'+slugify(nombre).toUpperCase()) : '';
+  document.getElementById('fechaAdquisicion').value=existentes[0]?.fecha_adquisicion || '2026-09-01';
+}
 function onProveedorChange(){ if(document.getElementById('proveedorSelect').value) document.getElementById('nuevoProveedorBox').classList.remove('show'); }
 
 function num(id){ return parseFloat(document.getElementById(id).value) || 0; }
 
 function recalcular(){
-  const costoCaja = num('costoCaja');
-  const descuento = num('descuento');
-  const viales = num('vialesPorCaja');
-  const precioCaja = num('precioCaja');
-  const precioVial = num('precioVial');
-
-  const costoNeto = costoCaja * (1 - descuento/100);
-  const costoVial = viales > 0 ? costoNeto / viales : 0;
-
-  document.getElementById('costoNeto').textContent = '$ ' + costoNeto.toFixed(2);
-  document.getElementById('costoVial').textContent = '$ ' + costoVial.toFixed(2);
-
-  const margenCaja = precioCaja > 0 ? ((precioCaja - costoNeto) / precioCaja * 100) : null;
-  const margenVial = precioVial > 0 && costoVial > 0 ? ((precioVial - costoVial) / precioVial * 100) : null;
-
-  document.getElementById('margenCaja').textContent = margenCaja !== null ? margenCaja.toFixed(1) + '%' : '—';
-  document.getElementById('margenVial').textContent = margenVial !== null ? margenVial.toFixed(1) + '%' : '—';
+  const costo=num('costoUnitario'),precio=num('precioVial');
+  document.getElementById('margenVial').textContent = precio>0 ? ((precio-costo)/precio*100).toFixed(1)+'%' : '—';
+}
+function convertirCompra(){
+  const cajas=document.getElementById('cajasCompradas').value;
+  const costo=document.getElementById('costoCompraCaja').value;
+  const resumen=document.getElementById('compraResumen');
+  if(cajas===''){resumen.textContent='—';return;}
+  try{
+    const resultado=compraAUnidades(Number(cajas),Number(costo),num('descuentoCompra'));
+    document.getElementById('stockUnidades').value=resultado.unidades;
+    if(costo!=='')document.getElementById('costoUnitario').value=Number(resultado.costoUnitario.toFixed(4));
+    resumen.textContent=resultado.unidades+' unidades'+(costo!==''?' · '+formatMoneda(resultado.costoUnitario)+'/unidad':'');
+    recalcular();
+  }catch(e){resumen.textContent=e.message;}
 }
 
 function slugify(s){
@@ -303,7 +267,12 @@ async function guardarLote(){
   btn.disabled = true;
   setStatus('Guardando…', false);
 
+  const respaldo = {productos:structuredClone(productos),proveedores:structuredClone(proveedores),lotes:structuredClone(lotes)};
   try{
+    for(const id of ['concentracion','stockUnidades','costoUnitario','precioVial']){
+      if(num(id)<0) throw new Error('Las cantidades, costos y precios no pueden ser negativos.');
+    }
+    if(!Number.isSafeInteger(num('stockUnidades'))) throw new Error('Las unidades deben ser un número entero.');
     // Producto: existente o nuevo (con detección de duplicado por nombre)
     let productoId = document.getElementById('productoSelect').value;
     let productoNombre;
@@ -318,7 +287,7 @@ async function guardarLote(){
         productoId = 'prod_' + slugify(nombreNuevo);
         productoNombre = nombreNuevo;
         productos.push({ id: productoId, nombre: productoNombre, categoria: document.getElementById('nuevoProductoCategoria').value.trim() || 'Sin categoría' });
-        await ghPut('data/productos.json', productos, `Alta producto: ${productoNombre}`);
+
       }
     } else {
       productoNombre = productos.find(p => p.id === productoId).nombre;
@@ -338,17 +307,13 @@ async function guardarLote(){
         proveedorId = 'prov_' + slugify(nombreNuevo);
         proveedorNombre = nombreNuevo;
         proveedores.push({ id: proveedorId, nombre: proveedorNombre });
-        await ghPut('data/proveedores.json', proveedores, `Alta proveedor: ${proveedorNombre}`);
+
       }
     } else {
-      proveedorNombre = proveedores.find(v => v.id === proveedorId).nombre;
+      proveedorNombre = 'Camila';
     }
 
-    const costoCaja = num('costoCaja');
-    const descuento = num('descuento');
-    const viales = num('vialesPorCaja');
-    const costoNeto = costoCaja * (1 - descuento/100);
-    const costoVial = viales > 0 ? costoNeto / viales : 0;
+    const costoVial = num('costoUnitario');
 
     const loteId = 'lote_' + Date.now();
     let imagenUrl = '';
@@ -371,26 +336,21 @@ async function guardarLote(){
       lote: document.getElementById('loteCodigo').value.trim(),
       fecha_adquisicion: document.getElementById('fechaAdquisicion').value,
       fecha_caducidad: document.getElementById('fechaCaducidad').value,
-      costo_compra_caja: costoCaja,
-      descuento_pct: descuento,
-      costo_neto_caja: Math.round(costoNeto * 100) / 100,
-      viales_por_caja: viales,
-      costo_por_vial: Math.round(costoVial * 100) / 100,
-      precio_venta_caja: num('precioCaja'),
+      costo_por_vial: Math.round(costoVial * 10000) / 10000,
       precio_venta_vial: num('precioVial'),
-      stock_cajas: num('stockCajas'),
-      stock_viales: 0,
+      stock_viales: num('stockUnidades'),
       imagen_url: imagenUrl
     };
 
     lotes.push(nuevoLote);
-    await ghPut('data/lotes.json', lotes, `Alta lote: ${productoNombre} ${nuevoLote.lote}`);
+    await ghGuardarAtomico({'data/productos.json':productos,'data/proveedores.json':proveedores,'data/lotes.json':lotes}, `Alta lote: ${productoNombre} ${nuevoLote.lote}`, getToken(), shaCache);
 
     setStatus('✓ Lote guardado — ' + productoNombre + ' ' + nuevoLote.lote, false);
-    document.querySelectorAll('input').forEach(i => i.value = '');
+    document.querySelectorAll('input:not([type=hidden]):not([readonly])').forEach(i => i.value = '');
     recalcular();
     renderSelects();
   }catch(e){
+    productos=respaldo.productos;proveedores=respaldo.proveedores;lotes=respaldo.lotes;
     setStatus('Error: ' + e.message, true);
   }finally{
     btn.disabled = false;
@@ -400,5 +360,6 @@ async function guardarLote(){
 // init
 if(ensureToken()){ cargarDatos(); }
 </script>
+<script src="../js/ui.js?v=20260930"></script>
 </body>
 </html>

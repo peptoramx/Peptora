@@ -5,22 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Peptora — Portal de venta</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/theme.css?v=5">
-<link rel="icon" href="../favicon.ico" sizes="any">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/theme.css?v=20260930">
 <link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/icon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="../assets/icons/icon-180.png">
 <link rel="manifest" href="../site.webmanifest">
-<meta name="theme-color" content="#0EA99B">
+<meta name="theme-color" content="#102a3a">
 <style>
   .vend-header{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 20px;margin-bottom:20px;box-shadow:var(--shadow-1);}
   .vend-header .n{font-size:16px;font-weight:700;}
-  .vend-header .l{font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-top:2px;}
+  .vend-header .l{font-size:11px;color:var(--muted);font-family:'Archivo',Arial,sans-serif;margin-top:2px;}
   .blocked{background:var(--brick-tint);color:var(--brick);border-radius:var(--radius);padding:16px 20px;font-size:13px;}
   .cart-item{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:12.5px;}
   .cart-item:last-child{border-bottom:none;}
   .cart-item .n{font-weight:600;}
-  .cart-item .meta{font-size:10.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+  .cart-item .meta{font-size:10.5px;color:var(--muted);font-family:'Archivo',Arial,sans-serif;}
   .cart-item .rm{background:none;border:none;color:var(--brick);cursor:pointer;font-size:16px;padding:0 4px;}
   .promo-banner{background:var(--teal-tint);color:var(--teal-deep);border-radius:var(--radius-sm);padding:10px 14px;font-size:12.5px;font-weight:600;margin-bottom:12px;display:none;}
   .promo-banner.show{display:block;}
@@ -43,7 +42,8 @@
   <div id="formArea"></div>
 </div>
 
-<script src="../js/datos.js?v=4"></script>
+<script src="../js/datos.js?v=20260930"></script>
+<script src="../js/transacciones.js?v=20260930"></script>
 <script>
 const REPO = 'peptoramx/Peptora';
 const API = `https://api.github.com/repos/${REPO}/contents`;
@@ -71,7 +71,8 @@ async function ghGetRaw(path){
   if(!res.ok) throw new Error(`GET ${path} -> ${res.status}`);
   const json = await res.json();
   shaCache[path] = json.sha;
-  return JSON.parse(decodeURIComponent(escape(atob(json.content))) || '[]');
+  const datos=JSON.parse(decodeURIComponent(escape(atob(json.content))) || '[]');
+  return path==='data/lotes.json' ? datos.map(normalizarLote) : datos;
 }
 async function ghPut(path, dataArr, msg){
   const content = btoa(unescape(encodeURIComponent(JSON.stringify(dataArr, null, 2))));
@@ -103,7 +104,8 @@ async function init(){
     if(!vendedor.activo){ bloquear(`${vendedor.nombre}: cuenta desactivada. Contacta al administrador.`); return; }
     document.getElementById('vendHeader').innerHTML = `<div class="vend-header"><div class="n">${vendedor.nombre}</div><div class="l">${vendedor.ubicacion||''}</div></div><a href="#" onclick="localStorage.removeItem(tokenKey()); location.reload(); return false;" style="font-size:11px;color:var(--gold);">cambiar mi token</a>`;
     lotes = await ghGetRaw('data/lotes.json');
-    try{ consignaciones = await ghGetRaw('data/consignaciones.json'); }catch(e){ consignaciones = []; }
+    try{ consignaciones = await ghGetRaw('data/consignaciones.json'); }catch(e){ if(!e.message.endsWith('-> 404')) throw e; consignaciones = []; }
+    consignaciones=normalizarConsignaciones(consignaciones,lotes);
     renderForm();
   }catch(e){ bloquear('Error de acceso — verifica tu token. (' + e.message + ')'); }
 }
@@ -147,7 +149,7 @@ function renderForm(){
   sel.innerHTML = '<option value="">— seleccionar —</option>' +
     mias.map(c => {
       const concMg = c.concentracion_mg || (lotes.find(l=>l.id===c.lote_id)||{}).concentracion_mg;
-      return `<option value="${c.id}">${c.producto_nombre}${concMg?' '+concMg+'mg':''} — ${c.cantidad_pendiente} ${c.tipo} contigo</option>`;
+      return `<option value="${c.id}">${c.producto_nombre}${concMg?' '+concMg+'mg':''} — ${c.cantidad_pendiente} unidades contigo</option>`;
     }).join('');
   sel.addEventListener('change', onLoteChange);
 }
@@ -158,7 +160,7 @@ function onLoteChange(){
   const info = document.getElementById('stockInfo');
   const cantidadInput = document.getElementById('cantidad');
   if(!c){ info.textContent=''; return; }
-  info.textContent = `Tienes contigo: ${c.cantidad_pendiente} ${c.tipo}`;
+  info.textContent = `Tienes contigo: ${c.cantidad_pendiente} unidades`;
   info.className = 'stock-info' + (c.cantidad_pendiente < 3 ? ' warn' : '');
   cantidadInput.max = c.cantidad_pendiente;
 }
@@ -166,12 +168,12 @@ function onLoteChange(){
 function agregarAlCarrito(){
   const c = consigActual();
   if(!c){ setStatus('Selecciona un producto', true); return; }
-  const cantidad = parseInt(document.getElementById('cantidad').value) || 0;
-  if(cantidad <= 0){ setStatus('Cantidad inválida', true); return; }
+  const cantidad = Number(document.getElementById('cantidad').value);
+  if(!Number.isSafeInteger(cantidad) || cantidad <= 0){ setStatus('Cantidad inválida', true); return; }
   const yaEnCarrito = carrito.filter(x => x.consignacion_id === c.id).reduce((s,x)=>s+x.cantidad, 0);
   if(cantidad + yaEnCarrito > c.cantidad_pendiente){ setStatus(`Solo tienes ${c.cantidad_pendiente - yaEnCarrito} disponibles de eso`, true); return; }
   const l = lotes.find(x => x.id === c.lote_id) || {};
-  const precioLista = c.tipo === 'caja' ? (l.precio_venta_caja||0) : (l.precio_venta_vial||0);
+  const precioLista = l.precio_venta_vial||0;
   const esCortesia = document.getElementById('cortesiaChk').checked;
   const precioUnit = esCortesia ? 0 : precioLista;
   const concMg = c.concentracion_mg || l.concentracion_mg || 0;
@@ -224,9 +226,10 @@ async function confirmarVenta(){
     const promo = calcularPromocion(carrito.map(c=>({producto_id:c.producto_id, subtotal:c.subtotal})), descuentoPct);
     const grupoId = 'venta_grp_' + Date.now();
     const nuevasVentas = [];
+    const consignacionesNuevas = consignaciones.map(c=>({...c}));
     for(let i=0;i<carrito.length;i++){
       const c = carrito[i];
-      const consig = consignaciones.find(x => x.id === c.consignacion_id);
+      const consig = consignacionesNuevas.find(x => x.id === c.consignacion_id);
       if(!consig || consig.cantidad_pendiente < c.cantidad) throw new Error(`Ya no tienes suficiente de ${c.producto_nombre} en consignación`);
       consig.cantidad_pendiente -= c.cantidad;
       const totalLinea = promo.items[i].total_linea;
@@ -241,10 +244,10 @@ async function confirmarVenta(){
       });
     }
     // Nota: NO se toca data/lotes.json — ese stock ya salio de bodega cuando se entrego en consignacion.
-    await ghPut('data/consignaciones.json', consignaciones, `Venta desde consignación (${vendedor.nombre}): ${carrito.length} productos`);
-    let ventas; try{ ventas = await ghGetRaw('data/ventas.json'); }catch(e){ ventas = []; }
+    const ventas = normalizarVentas(await ghGetRaw('data/ventas.json'),lotes);
     ventas.push(...nuevasVentas);
-    await ghPut('data/ventas.json', ventas, `Venta registrada por ${vendedor.nombre}`);
+    await ghGuardarAtomico({'data/consignaciones.json':consignacionesNuevas,'data/ventas.json':ventas}, `Venta registrada por ${vendedor.nombre}`, getToken(), shaCache);
+    consignaciones = consignacionesNuevas;
     setStatus(`✓ Venta registrada — ${formatMoneda(promo.subtotalTotal - promo.descuentoTotal)}`, false);
     carrito = [];
     renderForm();
@@ -254,5 +257,6 @@ async function confirmarVenta(){
 
 init();
 </script>
+<script src="../js/ui.js?v=20260930"></script>
 </body>
 </html>

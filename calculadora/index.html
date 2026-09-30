@@ -5,44 +5,43 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Peptora — Calculadora de dosificación</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/theme.css?v=5">
-<link rel="icon" href="../favicon.ico" sizes="any">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/theme.css?v=20260930">
 <link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/icon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="../assets/icons/icon-180.png">
 <link rel="manifest" href="../site.webmanifest">
-<meta name="theme-color" content="#0EA99B">
+<meta name="theme-color" content="#102a3a">
 <style>
   .unit-toggle{display:flex;gap:8px;}
-  .unit-toggle button{flex:1;padding:10px;background:var(--bg);border:1px solid var(--line-strong);border-radius:var(--radius-sm);color:var(--ink-soft);font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13px;cursor:pointer;}
+  .unit-toggle button{flex:1;padding:10px;background:var(--bg);border:1px solid var(--line-strong);border-radius:var(--radius-sm);color:var(--ink-soft);font-family:'Inter',Arial,sans-serif;font-weight:600;font-size:13px;cursor:pointer;}
   .unit-toggle button.active{background:var(--teal);color:#fff;border-color:var(--teal);}
   .jeringa-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
   .jeringa-opt{padding:12px 8px;background:var(--bg);border:1px solid var(--line-strong);border-radius:var(--radius-sm);text-align:center;cursor:pointer;}
   .jeringa-opt.active{background:var(--teal-tint);border-color:var(--teal);}
-  .jeringa-opt .cap{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--ink);}
-  .jeringa-opt .u{font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+  .jeringa-opt .cap{font-family:'Archivo',Arial,sans-serif;font-size:13px;font-weight:700;color:var(--ink);}
+  .jeringa-opt .u{font-size:10px;color:var(--muted);font-family:'Archivo',Arial,sans-serif;}
 
   .resultado{background:var(--surface);border:2px solid var(--teal);border-radius:var(--radius);padding:22px;text-align:center;margin-top:6px;}
-  .resultado .num{font-family:'IBM Plex Mono',monospace;font-size:40px;font-weight:700;color:var(--teal-deep);line-height:1;}
+  .resultado .num{font-family:'Archivo',Arial,sans-serif;font-size:40px;font-weight:700;color:var(--teal-deep);line-height:1;}
   .resultado .lbl{font-size:12px;color:var(--ink-soft);margin-top:6px;font-weight:600;}
-  .resultado .sub{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);margin-top:10px;}
+  .resultado .sub{font-family:'Archivo',Arial,sans-serif;font-size:11.5px;color:var(--muted);margin-top:10px;}
 
   .warn-box{background:var(--brick-tint);color:var(--brick);border-radius:var(--radius-sm);padding:10px 14px;font-size:12.5px;margin-top:10px;font-weight:600;}
 
   .jeringa-svg{width:100%;max-width:420px;margin:16px auto 4px;display:block;}
   .stats-row{display:flex;justify-content:space-around;margin-top:16px;flex-wrap:wrap;gap:12px;}
   .stat-mini .l{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;}
-  .stat-mini .v{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;color:var(--ink);margin-top:2px;}
+  .stat-mini .v{font-family:'Archivo',Arial,sans-serif;font-size:16px;font-weight:700;color:var(--ink);margin-top:2px;}
 </style>
 </head>
 <body>
 <div class="form-wrap" style="max-width:640px;">
-  <a href="../" class="back">← dashboard</a>
+  <a href="../" class="back">← Inicio</a>
   <a href="#" onclick="localStorage.removeItem('peptora_token'); location.reload(); return false;" class="back" style="float:right;">cambiar token</a>
   <header>
     <div class="eyebrow">Peptora · herramienta</div>
     <h1>Calculadora de dosificación</h1>
-    <p>Reconstitución y unidades a cargar en jeringa. No requiere token — no escribe datos.</p>
+    <p>Conversión matemática de concentración y volumen de referencia. No establece una dosis, un tratamiento ni instrucciones de aplicación.</p>
   </header>
 
   <div class="card">
@@ -59,7 +58,7 @@
   </div>
 
   <div class="card">
-    <h2>2. Dosis de aplicación deseada</h2>
+    <h2>2. Cantidad de referencia</h2>
     <div class="row">
       <div class="field">
         <label>Cantidad</label>
@@ -98,7 +97,7 @@
   </div>
 </div>
 
-<script src="../js/datos.js?v=4"></script>
+<script src="../js/datos.js?v=20260930"></script>
 <script>
 let lotes = [];
 let unidad = 'mcg';
@@ -107,6 +106,7 @@ let jeringaCap = 100, jeringaMl = 1;
 async function initLotes(){
   try{
     lotes = await fetch(RUTA_DATOS_BASE_CALC() + 'data/lotes.json', {cache:'no-store'}).then(r=>r.json());
+    lotes=lotes.map(normalizarLote);
     const sel = document.getElementById('loteSelect');
     const disponibles = lotes.filter(l => stockEnViales(l) > 0);
     sel.innerHTML = '<option value="">— manual —</option>' +
@@ -196,7 +196,7 @@ function calcular(){
 
   const warn = document.getElementById('warnBox');
   if(unidades > jeringaCap){
-    warn.innerHTML = `<div class="warn-box">⚠ Excede la capacidad de esta jeringa (${jeringaCap}u). Usa una de mayor volumen o divide la dosis.</div>`;
+    warn.innerHTML = `<div class="warn-box">⚠ Excede la capacidad de esta jeringa (${jeringaCap}u). Revisa los valores de referencia. La calculadora no recomienda cómo administrarlo.</div>`;
   } else {
     warn.innerHTML = '';
   }
@@ -215,5 +215,6 @@ function calcular(){
 
 if(gateMasterToken()) { initLotes(); dibujarJeringa(0); }
 </script>
+<script src="../js/ui.js?v=20260930"></script>
 </body>
 </html>

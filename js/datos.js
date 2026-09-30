@@ -3,18 +3,68 @@
 
 function rutaDatos(){ return (window.RUTA_DATOS_BASE || '') + 'data/'; }
 
+async function cargarJSON(url, opts = {}){
+  const response = await fetch(url, opts);
+  if(!response.ok) throw new Error('No se pudieron cargar los datos (HTTP ' + response.status + '). Intenta de nuevo.');
+  const data = await response.json();
+  if(!Array.isArray(data)) throw new Error('El archivo de datos no tiene el formato esperado.');
+  return data;
+}
+function escaparHTML(value){
+  return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function normalizarBusqueda(value){
+  return String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+}
+function cantidadEntera(cantidad){
+  if(!Number.isSafeInteger(cantidad) || cantidad <= 0) throw new Error('La cantidad debe ser un número entero mayor que cero.');
+}
+// Compatibility adapters: legacy boxes are read as units; new operations are vial-only.
+function normalizarLote(lote){
+  const vpc = Number(lote.viales_por_caja) > 0 ? Number(lote.viales_por_caja) : 10;
+  return {...lote, viales_por_caja:vpc, stock_cajas:0,
+    stock_viales:Number(lote.stock_viales || 0)+Number(lote.stock_cajas || 0)*vpc,
+    costo_por_vial:lote.costo_por_vial != null ? Number(lote.costo_por_vial) : Number(lote.costo_neto_caja || 0)/vpc,
+    precio_venta_vial:lote.precio_venta_vial != null ? Number(lote.precio_venta_vial) : Number(lote.precio_venta_caja || 0)/vpc};
+}
+function normalizarVentas(ventas,lotes){
+  const porId=Object.fromEntries(lotes.map(l=>[l.id,l]));
+  return ventas.map(v=>{
+    if(v.tipo_venta!=='caja') return {...v};
+    const factor=porId[v.lote_id]?.viales_por_caja || 10;
+    return {...v,tipo_venta:'vial',cantidad:v.cantidad*factor,
+      tipo_venta_original:v.tipo_venta_original || 'caja',cantidad_original:v.cantidad_original ?? v.cantidad};
+  });
+}
+function normalizarConsignaciones(consignaciones,lotes){
+  const porId=Object.fromEntries(lotes.map(l=>[l.id,l]));
+  return consignaciones.map(c=>{
+    if(c.tipo!=='caja') return {...c};
+    const factor=porId[c.lote_id]?.viales_por_caja || 10;
+    return {...c,tipo:'vial',cantidad_entregada:c.cantidad_entregada*factor,
+      cantidad_pendiente:c.cantidad_pendiente*factor,tipo_original:c.tipo_original || 'caja',
+      cantidad_entregada_original:c.cantidad_entregada_original ?? c.cantidad_entregada};
+  });
+}
+function compraAUnidades(cajas,costoCaja,descuento=0){
+  if(!Number.isSafeInteger(cajas)||cajas<0) throw new Error('Captura un número entero de cajas compradas.');
+  if(!Number.isFinite(costoCaja)||costoCaja<0||!Number.isFinite(descuento)||descuento<0||descuento>100) throw new Error('Revisa costo y descuento.');
+  return {unidades:cajas*10,costoUnitario:costoCaja*(1-descuento/100)/10};
+}
+
 async function cargarTodo(){
   // cache:'no-store' + parametro de version -> evita que el CDN de GitHub Pages
   // o el navegador sirvan data/*.json desactualizado justo despues de una venta/alta.
   const cacheBuster = '?t=' + Date.now();
   const opts = { cache: 'no-store' };
   const [productos, proveedores, lotes, ventas] = await Promise.all([
-    fetch(rutaDatos() + 'productos.json' + cacheBuster, opts).then(r => r.json()),
-    fetch(rutaDatos() + 'proveedores.json' + cacheBuster, opts).then(r => r.json()),
-    fetch(rutaDatos() + 'lotes.json' + cacheBuster, opts).then(r => r.json()),
-    fetch(rutaDatos() + 'ventas.json' + cacheBuster, opts).then(r => r.json()),
+    cargarJSON(rutaDatos() + 'productos.json' + cacheBuster, opts),
+    cargarJSON(rutaDatos() + 'proveedores.json' + cacheBuster, opts),
+    cargarJSON(rutaDatos() + 'lotes.json' + cacheBuster, opts),
+    cargarJSON(rutaDatos() + 'ventas.json' + cacheBuster, opts),
   ]);
-  return { productos, proveedores, lotes, ventas };
+  const lotesUnidades=lotes.map(normalizarLote);
+  return { productos, proveedores, lotes:lotesUnidades, ventas:normalizarVentas(ventas,lotesUnidades) };
 }
 
 function formatMoneda(n){
@@ -26,60 +76,52 @@ function diasHasta(fechaStr){
   const hoy = new Date();
   hoy.setHours(0,0,0,0);
   const f = new Date(fechaStr + 'T00:00:00');
-  return Math.ceil((f - hoy) / 86400000);
+  return Number.isNaN(f.getTime()) ? Infinity : Math.round((f - hoy) / 86400000);
 }
 
 function stockEnViales(lote){
-  return (lote.stock_cajas || 0) * (lote.viales_por_caja || 0) + (lote.stock_viales || 0);
+  return Number(lote.stock_cajas || 0) * (Number(lote.viales_por_caja) || 10) + Number(lote.stock_viales || 0);
 }
 
 function estadoLote(lote){
   const dias = diasHasta(lote.fecha_caducidad);
   const stock = stockEnViales(lote);
   if(stock === 0) return 'brick';
-  if(dias >= 0 && dias <= 60) return 'amber';
+  if(dias < 0) return 'brick';
+  if(dias <= 60) return 'amber';
   if(stock < 5) return 'brick';
   return 'teal';
 }
 
-// Vende por caja: descuenta cajas completas. Lanza error si no hay stock suficiente.
-function venderCaja(lote, cantidad){
-  if((lote.stock_cajas || 0) < cantidad){
-    throw new Error(`Stock insuficiente: ${lote.stock_cajas || 0} cajas disponibles, se pidieron ${cantidad}`);
-  }
-  lote.stock_cajas -= cantidad;
-}
-
-// Vende por vial: si no hay viales sueltos suficientes, abre cajas completas automáticamente.
-function venderVial(lote, cantidad){
-  const vpc = lote.viales_por_caja || 0;
-  while((lote.stock_viales || 0) < cantidad){
-    if((lote.stock_cajas || 0) <= 0 || vpc <= 0){
-      throw new Error(`Stock insuficiente: quedan ${stockEnViales(lote)} viales equivalentes, se pidieron ${cantidad}`);
-    }
-    lote.stock_cajas -= 1;
-    lote.stock_viales = (lote.stock_viales || 0) + vpc;
-  }
-  lote.stock_viales -= cantidad;
+// Retained only for interpreting historical box records, never exposed in the UI.
+function venderCaja(lote,cantidad){cantidadEntera(cantidad);venderVial(lote,cantidad*(lote.viales_por_caja||10));}
+function venderVial(lote,cantidad){
+  cantidadEntera(cantidad);
+  const unidades=normalizarLote(lote);
+  if(cantidad>unidades.stock_viales) throw new Error(`Stock insuficiente: quedan ${unidades.stock_viales} unidades, se pidieron ${cantidad}`);
+  unidades.stock_viales-=cantidad;
+  Object.assign(lote,unidades);
 }
 
 function calcularKPIs({ lotes, ventas }){
-  ventas = ventasActivas(ventas);
+  lotes=lotes.map(normalizarLote);
+  ventas = ventasActivas(normalizarVentas(ventas,lotes));
   const hoy = new Date();
   const mesActual = hoy.getMonth(), anioActual = hoy.getFullYear();
   let mesAnt = mesActual - 1, anioAnt = anioActual;
   if(mesAnt < 0){ mesAnt = 11; anioAnt -= 1; }
 
-  const valorCosto = lotes.reduce((s,l) => s + (l.costo_neto_caja||0)*(l.stock_cajas||0) + (l.costo_por_vial||0)*(l.stock_viales||0), 0);
-  const valorVenta = lotes.reduce((s,l) => s + (l.precio_venta_caja||0)*(l.stock_cajas||0) + (l.precio_venta_vial||0)*(l.stock_viales||0), 0);
+  const valorCosto = lotes.reduce((s,l) => s + (l.costo_por_vial||0)*stockEnViales(l), 0);
+  const valorVenta = lotes.reduce((s,l) => s + (l.precio_venta_vial||0)*stockEnViales(l), 0);
   const margenPonderado = valorVenta > 0 ? (valorVenta - valorCosto) / valorVenta * 100 : 0;
 
+  const caducados = lotes.filter(l => diasHasta(l.fecha_caducidad) < 0 && stockEnViales(l) > 0).length;
   const caducidadProxima = lotes.filter(l => { const d = diasHasta(l.fecha_caducidad); return d >= 0 && d <= 60; }).length;
   const stockCritico = lotes.filter(l => { const s = stockEnViales(l); return s > 0 && s < 5; }).length;
   const stockAgotado = lotes.filter(l => stockEnViales(l) === 0).length;
 
   function ventasDe(mes, anio){
-    return ventas.filter(v => { const f = new Date(v.fecha); return f.getMonth()===mes && f.getFullYear()===anio; });
+    return ventas.filter(v => { const f = new Date(/^\d{4}-\d{2}-\d{2}$/.test(v.fecha) ? v.fecha+'T12:00:00' : v.fecha); return f.getMonth()===mes && f.getFullYear()===anio; });
   }
   const ventasMes = ventasDe(mesActual, anioActual);
   const ventasMesAnt = ventasDe(mesAnt, anioAnt);
@@ -88,15 +130,17 @@ function calcularKPIs({ lotes, ventas }){
   const ingresosMesAnt = ventasMesAnt.reduce((s,v) => s + (v.precio_vendido||0), 0);
   const variacionIngresos = ingresosMesAnt > 0 ? (ingresosMes - ingresosMesAnt) / ingresosMesAnt * 100 : null;
 
-  const ticketPromedio = ventasMes.length > 0 ? ingresosMes / ventasMes.length : 0;
-  const ticketPromedioAnt = ventasMesAnt.length > 0 ? ingresosMesAnt / ventasMesAnt.length : null;
+  const ticketsMes = new Set(ventasMes.map(v=>v.grupo_id || v.id)).size;
+  const ticketsMesAnt = new Set(ventasMesAnt.map(v=>v.grupo_id || v.id)).size;
+  const ticketPromedio = ticketsMes > 0 ? ingresosMes / ticketsMes : 0;
+  const ticketPromedioAnt = ticketsMesAnt > 0 ? ingresosMesAnt / ticketsMesAnt : null;
   const variacionTicket = ticketPromedioAnt ? (ticketPromedio - ticketPromedioAnt) / ticketPromedioAnt * 100 : null;
 
   const lotesPorId = Object.fromEntries(lotes.map(l => [l.id, l]));
   function costoDeVenta(v){
     const l = lotesPorId[v.lote_id];
     if(!l) return 0;
-    return (v.tipo_venta === 'caja' ? (l.costo_neto_caja||0) : (l.costo_por_vial||0)) * (v.cantidad||0);
+    return (l.costo_por_vial||0)*(v.cantidad||0);
   }
   const costoVentasMes = ventasMes.reduce((s,v) => s + costoDeVenta(v), 0);
   const costoVentasMesAnt = ventasMesAnt.reduce((s,v) => s + costoDeVenta(v), 0);
@@ -118,7 +162,7 @@ function calcularKPIs({ lotes, ventas }){
   const maxTop5 = top5.length ? top5[0][1] : 1;
 
   return {
-    valorCosto, valorVenta, margenPonderado, caducidadProxima, stockCritico, stockAgotado,
+    valorCosto, valorVenta, margenPonderado, caducidadProxima, caducados, stockCritico, stockAgotado,
     lotesActivos: lotes.length,
     ingresosMes, variacionIngresos, ticketPromedio, variacionTicket,
     margenBrutoMes, variacionMargen, rotacionDias,
@@ -183,7 +227,8 @@ function comisionVendedor(ventas, vendedor, pagos, lotes, productos){
 // items: [{ producto_id, subtotal }]. descuentoPct: numero que el usuario captura (0 = sin descuento).
 // No hay nada automático aquí: si descuentoPct es 0 o no se manda, no se descuenta un peso.
 function calcularPromocion(items, descuentoPct){
-  descuentoPct = descuentoPct || 0;
+  descuentoPct = Number(descuentoPct || 0);
+  if(!Number.isFinite(descuentoPct) || descuentoPct < 0 || descuentoPct > 100) throw new Error('El descuento debe estar entre 0 y 100%.');
   const aplica = descuentoPct > 0;
   const subtotalTotal = items.reduce((s,i) => s + i.subtotal, 0);
   const descuentoTotal = aplica ? subtotalTotal * (descuentoPct/100) : 0;
@@ -200,16 +245,18 @@ function calcularPromocion(items, descuentoPct){
 // Ranking global de productos por unidades vendidas (historico). Marca el ultimo 25% (o sin ventas) como rezagado.
 function popularidadProductos(lotes, ventas){
   ventas = ventasActivas(ventas);
+  const lotesPorId = Object.fromEntries(lotes.map(l=>[l.id,l]));
   const nombrePorLote = Object.fromEntries(lotes.map(l => [l.id, l.producto_nombre]));
   const unidades = {};
   ventas.forEach(v => {
     const nombre = v.producto_nombre || nombrePorLote[v.lote_id] || 'Desconocido';
-    unidades[nombre] = (unidades[nombre]||0) + (v.cantidad||0);
+    const factor = v.tipo_venta==='caja' ? (lotesPorId[v.lote_id]?.viales_por_caja || 1) : 1;
+    unidades[nombre] = (unidades[nombre]||0) + (v.cantidad||0)*factor;
   });
   const todos = new Set([...Object.keys(unidades), ...lotes.map(l => l.producto_nombre)]);
   const lista = [...todos].map(nombre => ({ nombre, unidades: unidades[nombre]||0 }));
   lista.sort((a,b) => b.unidades - a.unidades);
-  const max = lista.length ? lista[0].unidades : 1;
+  const max = lista.length ? Math.max(lista[0].unidades, 1) : 1;
   const n = lista.length;
   const corte = Math.ceil(n*0.75);
   return lista.map((item,i) => ({ ...item, max, rezagado: item.unidades===0 || i>=corte }));
@@ -218,16 +265,21 @@ function popularidadProductos(lotes, ventas){
 // Gate simple de acceso: bloquea la pagina completa hasta que haya un token guardado.
 function gateMasterToken(){
   if(localStorage.getItem('peptora_token')) return true;
+  const base = window.RUTA_DATOS_BASE || (location.pathname.endsWith('/index.html') && location.pathname.split('/').length > 2 ? '../' : (document.querySelector('.form-wrap') ? '../' : ''));
   document.body.innerHTML = `
-    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg,#F3F6F5);font-family:'Space Grotesk',sans-serif;padding:20px;">
-      <div style="background:var(--surface,#fff);border:1px solid var(--line,#E1E7E5);border-radius:10px;padding:28px;max-width:360px;width:100%;box-shadow:0 8px 24px -8px rgba(20,32,31,.14);">
-        <div style="font-size:11px;color:#0A8074;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;font-weight:600;">Peptora · acceso restringido</div>
-        <div style="font-size:14px;margin-bottom:14px;color:#14201F;">Ingresa tu token de GitHub para continuar.</div>
-        <input id="gateTokenInput" type="password" placeholder="Token" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #CBD5D3;border-radius:6px;font-family:'IBM Plex Mono',monospace;margin-bottom:10px;">
-        <button id="gateTokenBtn" style="width:100%;padding:11px;background:#0EA99B;color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif;font-size:14px;">Entrar</button>
-      </div>
-    </div>`;
-  document.getElementById('gateTokenBtn').onclick = () => {
+    <main class="access-screen"><form class="access-card" id="gateForm">
+      <img class="brand-logo" src="${base}assets/logo-peptora.png" alt="PEPTORA Research Peptide Labs" width="1200" height="400">
+      <span class="brand-caption">OPERATIONS / INVENTORY</span>
+      <h1>Tu centro de operaciones.</h1>
+      <p>Control de inventario, ventas y consignaciones.</p>
+      <label for="gateTokenInput">Token de acceso GitHub</label>
+      <input id="gateTokenInput" type="password" placeholder="Token de acceso" required autocomplete="off">
+      <button class="btn" id="gateTokenBtn" type="submit">Entrar al inventario →</button>
+      <p class="hint">El token se guarda en este navegador. Utiliza únicamente un equipo de confianza.</p>
+    </form></main>`;
+  document.getElementById('gateForm').onsubmit = event => { event.preventDefault(); };
+  document.getElementById('gateForm').onsubmit = event => {
+    event.preventDefault();
     const v = document.getElementById('gateTokenInput').value.trim();
     if(!v) return;
     localStorage.setItem('peptora_token', v);
@@ -238,8 +290,10 @@ function gateMasterToken(){
 
 // Revierte el descuento de stock de una venta cancelada (inverso de venderCaja/venderVial).
 function revertirStock(lote, tipoVenta, cantidad){
-  if(tipoVenta === 'caja') lote.stock_cajas = (lote.stock_cajas||0) + cantidad;
-  else lote.stock_viales = (lote.stock_viales||0) + cantidad;
+  cantidadEntera(cantidad);
+  const unidades=normalizarLote(lote);
+  unidades.stock_viales += cantidad*(tipoVenta==='caja' ? (lote.viales_por_caja || 10) : 1);
+  Object.assign(lote,unidades);
 }
 
 function ventasActivas(ventas){

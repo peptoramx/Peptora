@@ -5,11 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Peptora — Diagnóstico</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/theme.css?v=5">
-<link rel="icon" href="../favicon.ico" sizes="any">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/theme.css?v=20260930">
 <link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/icon-32.png">
-<meta name="theme-color" content="#A8863C">
+<meta name="theme-color" content="#102a3a">
 <style>
   .step{border:1px solid var(--line-strong);border-radius:6px;padding:16px 18px;margin-bottom:12px;}
   .step .h{font-weight:800;font-size:13px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;}
@@ -23,7 +22,7 @@
 </head>
 <body>
 <div class="form-wrap">
-  <a href="../" class="back">← dashboard</a>
+  <a href="../" class="back">← Inicio</a>
   <header>
     <div class="eyebrow">Peptora · diagnóstico</div>
     <h1>Probar mi token</h1>
@@ -54,7 +53,7 @@ function getToken(){ return localStorage.getItem('peptora_token'); }
 function mostrarTokenActual(){
   const t = getToken();
   document.getElementById('tokenShow').textContent = t
-    ? `${t.slice(0,14)}…${t.slice(-8)}  (${t.length} caracteres)`
+    ? 'Token configurado en este navegador'
     : '— sin token guardado —';
 }
 function guardarToken(){
@@ -78,6 +77,7 @@ function marcar(id, ok, texto){
 }
 
 async function correrPrueba(){
+  if(!confirm('Esta prueba crea y elimina un archivo temporal en GitHub. ¿Quieres comprobar la escritura real?')) return;
   const token = getToken();
   const el = document.getElementById('resultados');
   el.innerHTML = pasoEl('p1','1. Token guardado en este navegador') + pasoEl('p2','2. Acceso de lectura al repo') + pasoEl('p3','3. Acceso de escritura (prueba real)');
@@ -88,7 +88,7 @@ async function correrPrueba(){
     marcar('p3', false, 'omitido');
     return;
   }
-  marcar('p1', true, `Longitud: ${token.length} caracteres. Termina en: …${token.slice(-8)}`);
+  marcar('p1', true, 'Token configurado. No se muestra ninguna parte de la credencial.');
 
   // Paso 2: lectura
   let permisos = null;
@@ -136,5 +136,6 @@ async function correrPrueba(){
 
 mostrarTokenActual();
 </script>
+<script src="../js/ui.js?v=20260930"></script>
 </body>
 </html>

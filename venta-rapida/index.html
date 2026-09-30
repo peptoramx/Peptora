@@ -5,18 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Peptora — Venta rápida</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/theme.css?v=5">
-<link rel="icon" href="../favicon.ico" sizes="any">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/theme.css?v=20260930">
 <link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/icon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="../assets/icons/icon-180.png">
 <link rel="manifest" href="../site.webmanifest">
-<meta name="theme-color" content="#0EA99B">
+<meta name="theme-color" content="#102a3a">
 <style>
   .cart-item{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:12.5px;}
   .cart-item:last-child{border-bottom:none;}
   .cart-item .n{font-weight:600;}
-  .cart-item .meta{font-size:10.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+  .cart-item .meta{font-size:10.5px;color:var(--muted);font-family:'Archivo',Arial,sans-serif;}
   .cart-item .rm{background:none;border:none;color:var(--brick);cursor:pointer;font-size:16px;padding:0 4px;}
   .promo-banner{background:var(--teal-tint);color:var(--teal-deep);border-radius:var(--radius-sm);padding:10px 14px;font-size:12.5px;font-weight:600;margin-bottom:12px;display:none;}
   .promo-banner.show{display:block;}
@@ -24,12 +23,12 @@
 </head>
 <body>
 <div class="form-wrap">
-  <a href="../" class="back">← dashboard</a>
+  <a href="../" class="back">← Inicio</a>
   <a href="#" onclick="localStorage.removeItem('peptora_token'); location.reload(); return false;" class="back" style="float:right;">cambiar token</a>
   <header>
-    <div class="eyebrow">Peptora · captura directa</div>
+    <div class="eyebrow">PEPTORA · inventario</div>
     <h1>Venta rápida</h1>
-    <p>Agrega varios productos al carrito — la promoción por volumen se aplica sola.</p>
+    <p>Agrega productos, revisa existencias y define el descuento antes de confirmar.</p>
   </header>
 
   <div class="token-bar" id="tokenBar">
@@ -45,13 +44,6 @@
       <div class="stock-info" id="stockInfo"></div>
     </div>
     <div class="row">
-      <div class="field">
-        <label>Tipo de venta</label>
-        <div class="tipo-toggle">
-          <button type="button" id="btnCaja" onclick="setTipo('caja')">Por caja</button>
-          <button type="button" id="btnVial" class="active" onclick="setTipo('vial')">Por vial</button>
-        </div>
-      </div>
       <div class="field"><label>Cantidad</label><input id="cantidad" type="number" min="1" value="1"></div>
     </div>
     <div class="check-row"><input type="checkbox" id="cortesiaChk"><label for="cortesiaChk">Cortesía (este artículo va gratis)</label></div>
@@ -73,7 +65,8 @@
   <span class="status" id="statusMsg"></span>
 </div>
 
-<script src="../js/datos.js?v=4"></script>
+<script src="../js/datos.js?v=20260930"></script>
+<script src="../js/transacciones.js?v=20260930"></script>
 <script>
 const REPO = 'peptoramx/Peptora';
 const API = `https://api.github.com/repos/${REPO}/contents`;
@@ -101,7 +94,8 @@ async function ghGetRaw(path){
   if(!res.ok) throw new Error(`GET ${path} -> ${res.status}`);
   const json = await res.json();
   shaCache[path] = json.sha;
-  return JSON.parse(decodeURIComponent(escape(atob(json.content))) || '[]');
+  const datos=JSON.parse(decodeURIComponent(escape(atob(json.content))) || '[]');
+  return path==='data/lotes.json' ? datos.map(normalizarLote) : datos;
 }
 async function ghPut(path, dataArr, msg){
   const content = btoa(unescape(encodeURIComponent(JSON.stringify(dataArr, null, 2))));
@@ -128,20 +122,15 @@ function renderLoteSelect(){
   const sel = document.getElementById('loteSelect');
   const disponibles = lotes.filter(l => stockEnViales(l) > 0);
   sel.innerHTML = '<option value="">— seleccionar —</option>' +
-    disponibles.map(l => `<option value="${l.id}">${l.producto_nombre} · ${l.lote||'s/lote'} (${l.stock_cajas} caj / ${l.stock_viales} via)</option>`).join('');
+    disponibles.map(l => `<option value="${l.id}">${l.producto_nombre}${l.concentracion_mg?' '+l.concentracion_mg+'mg':''} · ${stockEnViales(l)} unidades · ${formatMoneda(l.precio_venta_vial)}/unidad${diasHasta(l.fecha_caducidad)<0?' · VENCIDO':''}</option>`).join('');
   onLoteChange();
 }
 function loteActual(){ return lotes.find(l => l.id === document.getElementById('loteSelect').value); }
-function setTipo(t){
-  tipoVenta = t;
-  document.getElementById('btnCaja').classList.toggle('active', t==='caja');
-  document.getElementById('btnVial').classList.toggle('active', t==='vial');
-}
 function onLoteChange(){
   const l = loteActual();
   const info = document.getElementById('stockInfo');
   if(!l){ info.textContent=''; return; }
-  info.textContent = `Disponible: ${l.stock_cajas} cajas · ${l.stock_viales} viales sueltos`;
+  info.textContent = `Disponible: ${stockEnViales(l)} unidades`;
   info.className = 'stock-info' + (stockEnViales(l) < 5 ? ' warn' : '');
 }
 document.addEventListener('change', (e) => { if(e.target.id === 'loteSelect') onLoteChange(); });
@@ -149,9 +138,16 @@ document.addEventListener('change', (e) => { if(e.target.id === 'loteSelect') on
 function agregarAlCarrito(){
   const l = loteActual();
   if(!l){ setStatus('Selecciona un lote', true); return; }
-  const cantidad = parseInt(document.getElementById('cantidad').value) || 0;
-  if(cantidad <= 0){ setStatus('Cantidad inválida', true); return; }
-  const precioLista = tipoVenta === 'caja' ? l.precio_venta_caja : l.precio_venta_vial;
+  const cantidad = Number(document.getElementById('cantidad').value);
+  if(!Number.isSafeInteger(cantidad) || cantidad <= 0){ setStatus('Cantidad inválida', true); return; }
+  try{
+    const prueba = lotes.map(lote => ({...lote}));
+    for(const item of [...carrito, {lote_id:l.id,tipo:tipoVenta,cantidad}]){
+      const lote = prueba.find(x=>x.id===item.lote_id);
+      venderVial(lote,item.cantidad);
+    }
+  }catch(e){ setStatus(e.message,true); return; }
+  const precioLista = l.precio_venta_vial;
   const esCortesia = document.getElementById('cortesiaChk').checked;
   const precioUnit = esCortesia ? 0 : precioLista;
   carrito.push({
@@ -186,7 +182,7 @@ function renderCarrito(){
     <div class="cart-item">
       <div style="display:flex;align-items:center;gap:9px;">
         ${c.imagen_url ? `<img src="../${c.imagen_url}" style="width:30px;height:30px;object-fit:cover;border-radius:2px;border:1px solid var(--line-strong);flex-shrink:0;">` : ''}
-        <div><div class="n">${c.producto_nombre}${c.esCortesia?' <span class="badge amber" style="font-size:9px;">CORTESÍA</span>':''}</div><div class="meta">${c.lote_codigo||'s/lote'} · ${c.tipo}</div></div>
+        <div><div class="n">${c.producto_nombre}${c.esCortesia?' <span class="badge amber" style="font-size:9px;">CORTESÍA</span>':''}</div><div class="meta">${c.lote_codigo||'s/lote'} · por unidad</div></div>
       </div>
       <div class="cell-mono">${c.cantidad} × ${formatMoneda(c.precioUnit)}</div>
       <div class="cell-mono strong">${formatMoneda(promo.items[i].total_linea)}</div>
@@ -223,11 +219,12 @@ async function confirmarVenta(){
     const promo = calcularPromocion(carrito.map(c=>({producto_id:c.producto_id, subtotal:c.subtotal})), descuentoPct);
     const grupoId = 'venta_grp_' + Date.now();
     const nuevasVentas = [];
+    const stockNuevo = lotes.map(l => ({...l}));
 
     for(let i=0;i<carrito.length;i++){
       const c = carrito[i];
-      const l = lotes.find(x => x.id === c.lote_id);
-      if(c.tipo === 'caja') venderCaja(l, c.cantidad); else venderVial(l, c.cantidad);
+      const l = stockNuevo.find(x => x.id === c.lote_id);
+      venderVial(l, c.cantidad);
       const totalLinea = promo.items[i].total_linea;
       const descuentoPctReal = c.subtotalLista > 0 ? Math.round((c.subtotalLista - totalLinea)/c.subtotalLista*10000)/100 : 0;
       nuevasVentas.push({
@@ -246,10 +243,10 @@ async function confirmarVenta(){
       });
     }
 
-    await ghPut('data/lotes.json', lotes, `Venta (${carrito.length} productos)`);
-    let ventas; try{ ventas = await ghGetRaw('data/ventas.json'); }catch(e){ ventas = []; }
+    const ventas = normalizarVentas(await ghGetRaw('data/ventas.json'),lotes);
     ventas.push(...nuevasVentas);
-    await ghPut('data/ventas.json', ventas, `Registro de venta: ${carrito.length} productos`);
+    await ghGuardarAtomico({'data/lotes.json':stockNuevo,'data/ventas.json':ventas}, `Venta: ${carrito.length} productos`, getToken(), shaCache);
+    lotes = stockNuevo;
 
     setStatus(`✓ Venta registrada — ${formatMoneda(promo.subtotalTotal - promo.descuentoTotal)}`, false);
     carrito = [];
@@ -261,5 +258,6 @@ async function confirmarVenta(){
 
 if(ensureToken()) init();
 </script>
+<script src="../js/ui.js?v=20260930"></script>
 </body>
 </html>
