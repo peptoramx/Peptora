@@ -79,7 +79,7 @@
       <div class="field"><label for="comisionVial">Comisión fija por vial</label><input id="comisionVial" type="number" min="0" step="0.01" value="0" oninput="recalcular()"><div class="hint">Monto absoluto, no porcentaje. Es una provisión para formar el precio; no cambia automáticamente las reglas de pago a vendedores.</div></div>
     </div>
     <div class="row">
-      <div class="field"><label for="aguaVial">Agua BAC de 3 ml por vial</label><input id="aguaVial" type="number" min="0" step="0.01" value="0" oninput="recalcular()"><div class="hint" id="aguaReferencia">Cargando precio de referencia…</div></div>
+      <div class="field"><label for="aguaVial">Costo real del agua BAC de cortesía (3 ml)</label><input id="aguaVial" type="number" min="0" step="0.01" value="0" oninput="recalcular()"><div class="hint" id="aguaReferencia">Captura lo que te cuesta el vial de agua incluido de cortesía. Editable; admite cero. No es su precio de venta ni descuenta existencias.</div></div>
       <div class="field"><label for="gananciaVial">Ganancia esperada por vial</label><input id="gananciaVial" type="number" min="0" step="0.01" value="0" oninput="recalcular()"><div class="hint">Importe absoluto que quieres agregar, no porcentaje.</div></div>
     </div>
     <div class="row">
@@ -246,11 +246,8 @@ function desglosePrecio(){
   return {costo:valores[0],envio:valores[1],comision:valores[2],agua_bac_3ml:valores[3],ganancia:valores[4],precio:Math.round((total+Number.EPSILON)*100)/100};
 }
 function proponerAgua(nombre){
-  const esAgua=/\b(bac|bacteriostat|water|agua)\b/i.test(normalizarBusqueda(nombre));
-  const referencias=lotes.filter(l=>/\b(bac|bacteriostat|water|agua)\b/i.test(normalizarBusqueda(l.producto_nombre))&&/3\s*ml/i.test(l.producto_nombre)&&Number(l.precio_venta_vial)>=0).sort((a,b)=>String(b.fecha_adquisicion||'').localeCompare(String(a.fecha_adquisicion||''))||String(b.id).localeCompare(String(a.id)));
-  const ref=referencias[0];
-  document.getElementById('aguaVial').value=esAgua?0:Number(ref?.precio_venta_vial||0);
-  document.getElementById('aguaReferencia').textContent=esAgua?'Agua BAC: este componente inicia en cero para no incluir otra agua. Puedes definir todos los importes.':ref?'Precio de venta registrado del agua BAC 3 ml: '+formatMoneda(Number(ref.precio_venta_vial))+'. Editable; no descuenta existencias de agua.':'No hay precio registrado de agua BAC 3 ml. Captura el importe o déjalo en cero.';
+  // La selección de producto no debe sobrescribir el costo que captura el usuario.
+  document.getElementById('aguaReferencia').textContent='Captura tu costo real del agua de cortesía para esta compra, o cero si no aplica. No se toma el precio de venta del inventario.';
 }
 function recalcular(){
   try{

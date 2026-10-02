@@ -115,7 +115,7 @@ function cargarLote(){
   const l = lotes.find(x => x.id === id);
   const d=l.desglose_precio_vial;
   const automatico=!!d;
-  const aguaDefault=/\b(bac|water|agua)\b/i.test(normalizarBusqueda(l.producto_nombre))?0:precioAguaReferencia();
+  const aguaDefault=0;
   area.innerHTML = `
     <div class="card">
       <h2>${l.producto_nombre} — ${l.lote||'s/lote'}</h2>
@@ -135,7 +135,7 @@ function cargarLote(){
         <div class="field"><label for="e_comision">Comisión fija por vial</label><input id="e_comision" type="number" min="0" step="0.01" value="${d?.comision??0}" oninput="recalc()" ${automatico?'':'disabled'}><div class="hint">Provisión para el precio; no modifica las reglas de pago del vendedor.</div></div>
       </div>
       <div class="row">
-        <div class="field"><label for="e_agua">Agua BAC 3 ml por vial</label><input id="e_agua" type="number" min="0" step="0.01" value="${d?.agua_bac_3ml??aguaDefault}" oninput="recalc()" ${automatico?'':'disabled'}><div class="hint">Propone el precio de venta registrado del agua de 3 ml; editable, admite cero. No descuenta existencias de agua.</div></div>
+        <div class="field"><label for="e_agua">Costo real del agua BAC de cortesía (3 ml)</label><input id="e_agua" type="number" min="0" step="0.01" value="${d?.agua_bac_3ml??aguaDefault}" oninput="activarCostoAgua()"><div class="hint">Captura lo que te cuesta el vial de agua incluido de cortesía. Siempre editable; admite cero. Revisa cualquier importe guardado anteriormente: no debe ser el precio de venta del agua. No descuenta existencias.</div></div>
         <div class="field"><label for="e_ganancia">Ganancia absoluta por vial</label><input id="e_ganancia" type="number" min="0" step="0.01" value="${d?.ganancia??Math.max(0,Number(l.precio_venta_vial||0)-Number(l.costo_por_vial||0)-aguaDefault)}" oninput="recalc()" ${automatico?'':'disabled'}></div>
       </div>
       <div class="row">
@@ -156,10 +156,6 @@ function cargarLote(){
   recalc();
 }
 
-function precioAguaReferencia(){
-  const referencias=lotes.filter(l=>/\b(bac|water|agua)\b/i.test(normalizarBusqueda(l.producto_nombre))&&/3\s*ml/i.test(l.producto_nombre)&&Number(l.precio_venta_vial)>=0).sort((a,b)=>String(b.fecha_adquisicion||'').localeCompare(String(a.fecha_adquisicion||''))||String(b.id).localeCompare(String(a.id)));
-  return Number(referencias[0]?.precio_venta_vial||0);
-}
 function desgloseEdicion(){
   const valores=['e_costovial','e_envio','e_comision','e_agua','e_ganancia'].map(id=>{const n=Number(document.getElementById(id).value);if(!Number.isFinite(n)||n<0)throw new Error('Los componentes del precio deben ser importes válidos y no negativos.');return n;});
   const total=valores.reduce((sum,n)=>sum+n,0);
@@ -167,9 +163,11 @@ function desgloseEdicion(){
   return {costo:valores[0],envio:valores[1],comision:valores[2],agua_bac_3ml:valores[3],ganancia:valores[4],precio:Math.round((total+Number.EPSILON)*100)/100};
 }
 function activarDesglose(){recalc();}
+function activarCostoAgua(){document.getElementById('e_desglose').checked=true;recalc();}
 function recalc(){
   const auto=document.getElementById('e_desglose').checked;
-  for(const id of ['e_envio','e_comision','e_agua','e_ganancia'])document.getElementById(id).disabled=!auto;
+  for(const id of ['e_envio','e_comision','e_ganancia'])document.getElementById(id).disabled=!auto;
+  document.getElementById('e_agua').disabled=false;
   document.getElementById('e_preciovial').readOnly=auto;
   try{
     if(!auto){document.getElementById('e_margen').textContent='Activa y completa el desglose para calcular el precio mínimo.';return;}

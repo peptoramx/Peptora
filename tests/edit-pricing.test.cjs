@@ -10,7 +10,9 @@ el('e_desglose').checked=true;vm.runInContext('recalc()',ctx);assert.equal(el('e
 assert.ok(el('e_margen').textContent.includes('485'));assert.ok(el('e_margen').textContent.includes('500'));
 el('e_envio').value='-1';assert.throws(()=>vm.runInContext('desgloseEdicion()',ctx));el('e_envio').value='15';
 el('e_ganancia').value='Infinity';assert.throws(()=>vm.runInContext('desgloseEdicion()',ctx));el('e_ganancia').value='500';
-vm.runInContext("lotes=[{id:'agua',producto_nombre:'Bac Water 3ml',precio_venta_vial:250}];",ctx);assert.equal(vm.runInContext('precioAguaReferencia()',ctx),250);
+el('e_desglose').checked=false;vm.runInContext('recalc()',ctx);assert.equal(el('e_agua').disabled,false);
+el('e_agua').value='28';vm.runInContext('activarCostoAgua()',ctx);assert.equal(el('e_desglose').checked,true);assert.equal(el('e_preciovial').value,'763.00');
+el('e_agua').value='250';
 (async()=>{
  ctx.ensureToken=()=>true;let saved;ctx.ghPut=async(p,data)=>{saved=data};
  vm.runInContext("lotes=[{id:'l',producto_nombre:'BPC',stock_viales:10,fecha_adquisicion:'2026-09-01',proveedor_nombre:'Camila',lote:'L1'}]",ctx);
