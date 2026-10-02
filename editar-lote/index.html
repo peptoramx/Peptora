@@ -113,6 +113,9 @@ function cargarLote(){
   const area = document.getElementById('formEdicion');
   if(!id){ area.innerHTML = ''; return; }
   const l = lotes.find(x => x.id === id);
+  const d=l.desglose_precio_vial;
+  const automatico=!!d;
+  const aguaDefault=/\b(bac|water|agua)\b/i.test(normalizarBusqueda(l.producto_nombre))?0:precioAguaReferencia();
   area.innerHTML = `
     <div class="card">
       <h2>${l.producto_nombre} — ${l.lote||'s/lote'}</h2>
@@ -125,8 +128,19 @@ function cargarLote(){
         <div class="field"><label>Costo unitario neto</label><input id="e_costovial" type="number" min="0" step="0.0001" value="${l.costo_por_vial||0}" oninput="recalc()"></div>
       </div>
       <div class="row">
+        <div class="field full"><label><input id="e_desglose" type="checkbox" ${automatico?'checked':''} onchange="activarDesglose()"> Calcular precio con desglose por vial</label><div class="hint">${automatico?'Se recuperan los importes guardados en este lote.':'Este lote no tiene desglose. Su precio actual se conserva hasta que actives el cálculo; revisa los importes antes de guardar.'}</div></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="e_envio">Envío, etiqueta y empaque por vial</label><input id="e_envio" type="number" min="0" step="0.01" value="${d?.envio??0}" oninput="recalc()" ${automatico?'':'disabled'}></div>
+        <div class="field"><label for="e_comision">Comisión fija por vial</label><input id="e_comision" type="number" min="0" step="0.01" value="${d?.comision??0}" oninput="recalc()" ${automatico?'':'disabled'}><div class="hint">Provisión para el precio; no modifica las reglas de pago del vendedor.</div></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="e_agua">Agua BAC 3 ml por vial</label><input id="e_agua" type="number" min="0" step="0.01" value="${d?.agua_bac_3ml??aguaDefault}" oninput="recalc()" ${automatico?'':'disabled'}><div class="hint">Propone el precio de venta registrado del agua de 3 ml; editable, admite cero. No descuenta existencias de agua.</div></div>
+        <div class="field"><label for="e_ganancia">Ganancia absoluta por vial</label><input id="e_ganancia" type="number" min="0" step="0.01" value="${d?.ganancia??Math.max(0,Number(l.precio_venta_vial||0)-Number(l.costo_por_vial||0)-aguaDefault)}" oninput="recalc()" ${automatico?'':'disabled'}></div>
+      </div>
+      <div class="row">
         <div class="field"><label>Precio de venta por unidad</label><input id="e_preciovial" type="number" min="0" step="0.01" value="${l.precio_venta_vial||0}" oninput="recalc()"></div>
-        <div class="field"><label>Margen por unidad</label><div class="computed" id="e_margen"></div></div>
+        <div class="field"><label>Precio para salir tablas / descuento máximo</label><div class="computed" id="e_margen" aria-live="polite"></div><div class="hint">Costo + envío/empaque + comisión fija + agua. No contempla gastos omitidos. El descuento consume la ganancia esperada.</div></div>
       </div>
       <div class="field full">
         <label>Foto del producto${l.imagen_url ? ' (ya tiene una — sube otra para reemplazarla)' : ''}</label>
@@ -142,10 +156,29 @@ function cargarLote(){
   recalc();
 }
 
+function precioAguaReferencia(){
+  const referencias=lotes.filter(l=>/\b(bac|water|agua)\b/i.test(normalizarBusqueda(l.producto_nombre))&&/3\s*ml/i.test(l.producto_nombre)&&Number(l.precio_venta_vial)>=0).sort((a,b)=>String(b.fecha_adquisicion||'').localeCompare(String(a.fecha_adquisicion||''))||String(b.id).localeCompare(String(a.id)));
+  return Number(referencias[0]?.precio_venta_vial||0);
+}
+function desgloseEdicion(){
+  const valores=['e_costovial','e_envio','e_comision','e_agua','e_ganancia'].map(id=>{const n=Number(document.getElementById(id).value);if(!Number.isFinite(n)||n<0)throw new Error('Los componentes del precio deben ser importes válidos y no negativos.');return n;});
+  const total=valores.reduce((sum,n)=>sum+n,0);
+  if(!Number.isFinite(total))throw new Error('El precio calculado no es válido.');
+  return {costo:valores[0],envio:valores[1],comision:valores[2],agua_bac_3ml:valores[3],ganancia:valores[4],precio:Math.round((total+Number.EPSILON)*100)/100};
+}
+function activarDesglose(){recalc();}
 function recalc(){
-  const costo=Number(document.getElementById('e_costovial').value);
-  const precio=Number(document.getElementById('e_preciovial').value);
-  document.getElementById('e_margen').textContent=precio>0 ? ((precio-costo)/precio*100).toFixed(1)+'%' : '—';
+  const auto=document.getElementById('e_desglose').checked;
+  for(const id of ['e_envio','e_comision','e_agua','e_ganancia'])document.getElementById(id).disabled=!auto;
+  document.getElementById('e_preciovial').readOnly=auto;
+  try{
+    if(!auto){document.getElementById('e_margen').textContent='Activa y completa el desglose para calcular el precio mínimo.';return;}
+    const d=desgloseEdicion();
+    document.getElementById('e_preciovial').value=d.precio.toFixed(2);
+    const base=d.costo+d.envio+d.comision+d.agua_bac_3ml;
+    const descuento=Math.max(0,d.precio-base);
+    document.getElementById('e_margen').textContent=formatMoneda(base)+' mínimo · '+formatMoneda(descuento)+' de descuento'+(d.precio>0?' ('+(descuento/d.precio*100).toFixed(1)+'%)':'');
+  }catch(e){document.getElementById('e_preciovial').value='';document.getElementById('e_margen').textContent=e.message;}
 }
 
 function setStatus(msg, isErr){ const el=document.getElementById('statusMsg'); if(el){el.textContent=msg; el.className='status '+(isErr?'err':'ok');} }
@@ -157,6 +190,7 @@ async function guardarCambios(id){
   }
   if(!Number.isSafeInteger(Number(document.getElementById('e_stockvial').value))){setStatus('Las unidades deben ser un número entero.',true);return;}
   try{
+  const detalle=document.getElementById('e_desglose').checked?desgloseEdicion():null;
   const l = {...lotes.find(x => x.id === id)};
   const archivoImagen = document.getElementById('e_imagenFile').files[0];
   if(archivoImagen){
@@ -171,8 +205,10 @@ async function guardarCambios(id){
     concentracion_mg:Number(document.getElementById('e_conc').value),
     stock_cajas:0,stock_viales:Number(document.getElementById('e_stockvial').value),
     costo_por_vial:Number(document.getElementById('e_costovial').value),
-    precio_venta_vial:Number(document.getElementById('e_preciovial').value)
+    precio_venta_vial:detalle?detalle.precio:Number(document.getElementById('e_preciovial').value)
   });
+  if(detalle)l.desglose_precio_vial=detalle;
+  else delete l.desglose_precio_vial;
     const nuevosLotes=lotes.map(item=>item.id===id?l:item);
     await ghPut('data/lotes.json', nuevosLotes, `Editar lote: ${l.producto_nombre} ${l.lote||''}`);
     lotes=nuevosLotes;

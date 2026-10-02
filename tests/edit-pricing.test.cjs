@@ -1,0 +1,23 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path');
+const elements=new Map();const el=id=>{if(!elements.has(id))elements.set(id,{value:'0',checked:false,files:[],textContent:'',innerHTML:'',classList:{add(){},remove(){}}});return elements.get(id)};
+const ctx=vm.createContext({document:{getElementById:el},localStorage:{getItem:()=>null},console});
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../js/datos.js'),'utf8'),ctx);
+const html=fs.readFileSync(path.join(__dirname,'../editar-lote/index.html'),'utf8');
+vm.runInContext([...html.matchAll(/<script(?![^>]*src=)[^>]*>([\s\S]*?)<\/script>/g)][0][1],ctx);
+for(const [id,n] of Object.entries({e_costovial:120,e_envio:15,e_comision:100,e_agua:250,e_ganancia:500,e_preciovial:2100}))el(id).value=String(n);
+vm.runInContext('recalc()',ctx);assert.equal(el('e_preciovial').value,'2100');
+el('e_desglose').checked=true;vm.runInContext('recalc()',ctx);assert.equal(el('e_preciovial').value,'985.00');assert.equal(el('e_preciovial').readOnly,true);
+assert.ok(el('e_margen').textContent.includes('485'));assert.ok(el('e_margen').textContent.includes('500'));
+el('e_envio').value='-1';assert.throws(()=>vm.runInContext('desgloseEdicion()',ctx));el('e_envio').value='15';
+el('e_ganancia').value='Infinity';assert.throws(()=>vm.runInContext('desgloseEdicion()',ctx));el('e_ganancia').value='500';
+vm.runInContext("lotes=[{id:'agua',producto_nombre:'Bac Water 3ml',precio_venta_vial:250}];",ctx);assert.equal(vm.runInContext('precioAguaReferencia()',ctx),250);
+(async()=>{
+ ctx.ensureToken=()=>true;let saved;ctx.ghPut=async(p,data)=>{saved=data};
+ vm.runInContext("lotes=[{id:'l',producto_nombre:'BPC',stock_viales:10,fecha_adquisicion:'2026-09-01',proveedor_nombre:'Camila',lote:'L1'}]",ctx);
+ el('e_conc').value='5';el('e_stockvial').value='10';
+ await vm.runInContext("guardarCambios('l')",ctx);
+ assert.equal(saved[0].precio_venta_vial,985);assert.equal(saved[0].desglose_precio_vial.comision,100);assert.equal(saved[0].stock_viales,10);assert.equal(saved[0].fecha_adquisicion,'2026-09-01');
+ el('e_desglose').checked=false;el('e_preciovial').value='2100';await vm.runInContext("guardarCambios('l')",ctx);
+ assert.equal(saved[0].precio_venta_vial,2100);assert.equal(saved[0].desglose_precio_vial,undefined);
+ console.log('Edición: precio antiguo conservado, suma, mínimo, descuento, validación, referencia BAC y guardado comprobados sin escrituras reales.');
+})().catch(e=>{console.error(e);process.exitCode=1});
