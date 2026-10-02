@@ -75,8 +75,16 @@
       <div class="field"><label for="costoUnitario">Costo unitario neto</label><input id="costoUnitario" type="number" min="0" step="0.0001" placeholder="118.00" oninput="recalcular()"><div class="hint">Lo que te cuesta cada vial, después de descuentos.</div></div>
     </div>
     <div class="row">
-      <div class="field"><label for="precioVial">Precio de venta por unidad</label><input id="precioVial" type="number" min="0" step="0.01" placeholder="210.00" oninput="recalcular()"></div>
-      <div class="field"><label>Margen por unidad</label><div class="computed" id="margenVial">—</div></div>
+      <div class="field"><label for="envioVial">Envío proporcional por vial</label><input id="envioVial" type="number" min="0" step="0.01" value="0" oninput="recalcular()"><div class="hint">Captura el importe de envío dividido entre las unidades de la compra.</div></div>
+      <div class="field"><label for="comisionVial">Comisión fija por vial</label><input id="comisionVial" type="number" min="0" step="0.01" value="0" oninput="recalcular()"><div class="hint">Monto absoluto, no porcentaje. Es una provisión para formar el precio; no cambia automáticamente las reglas de pago a vendedores.</div></div>
+    </div>
+    <div class="row">
+      <div class="field"><label for="aguaVial">Agua BAC de 3 ml por vial</label><input id="aguaVial" type="number" min="0" step="0.01" value="0" oninput="recalcular()"><div class="hint" id="aguaReferencia">Cargando precio de referencia…</div></div>
+      <div class="field"><label for="gananciaVial">Ganancia esperada por vial</label><input id="gananciaVial" type="number" min="0" step="0.01" value="0" oninput="recalcular()"><div class="hint">Importe absoluto que quieres agregar, no porcentaje.</div></div>
+    </div>
+    <div class="row">
+      <div class="field"><label for="precioVial">Precio de venta calculado por vial</label><input id="precioVial" type="number" min="0" step="0.01" readonly value="0"><div class="hint">Costo + envío + comisión + agua BAC + ganancia. Ajusta los componentes para modificar el precio.</div></div>
+      <div class="field"><label>Ganancia objetivo / descuento disponible</label><div class="computed" id="margenVial" aria-live="polite">—</div><div class="hint">Descuento teórico máximo antes de consumir la ganancia objetivo; no incluye impuestos ni otros cargos.</div></div>
     </div>
     <details class="purchase-helper">
       <summary>¿Compraste cajas? Convertir compra a unidades</summary>
@@ -223,14 +231,33 @@ function actualizarCriterios(){
   const existentes=lotes.filter(l=>normalizarBusqueda(l.producto_nombre)===normalizarBusqueda(nombre));
   document.getElementById('loteCodigo').value=nombre ? (existentes[0]?.lote || 'PEP-'+slugify(nombre).toUpperCase()) : '';
   document.getElementById('fechaAdquisicion').value=existentes[0]?.fecha_adquisicion || '2026-09-01';
+  proponerAgua(nombre);
+  recalcular();
 }
 function onProveedorChange(){ if(document.getElementById('proveedorSelect').value) document.getElementById('nuevoProveedorBox').classList.remove('show'); }
 
 function num(id){ return parseFloat(document.getElementById(id).value) || 0; }
 
+function desglosePrecio(){
+  const ids=['costoUnitario','envioVial','comisionVial','aguaVial','gananciaVial'];
+  const valores=ids.map(id=>{const raw=document.getElementById(id).value;const n=raw===''?0:Number(raw);if(!Number.isFinite(n)||n<0)throw new Error('Todos los componentes del precio deben ser importes válidos y no negativos.');return n;});
+  const total=valores.reduce((sum,n)=>sum+n,0);
+  if(!Number.isFinite(total))throw new Error('El precio calculado no es válido.');
+  return {costo:valores[0],envio:valores[1],comision:valores[2],agua_bac_3ml:valores[3],ganancia:valores[4],precio:Math.round((total+Number.EPSILON)*100)/100};
+}
+function proponerAgua(nombre){
+  const esAgua=/\b(bac|bacteriostat|water|agua)\b/i.test(normalizarBusqueda(nombre));
+  const referencias=lotes.filter(l=>/\b(bac|bacteriostat|water|agua)\b/i.test(normalizarBusqueda(l.producto_nombre))&&/3\s*ml/i.test(l.producto_nombre)&&Number(l.precio_venta_vial)>=0).sort((a,b)=>String(b.fecha_adquisicion||'').localeCompare(String(a.fecha_adquisicion||''))||String(b.id).localeCompare(String(a.id)));
+  const ref=referencias[0];
+  document.getElementById('aguaVial').value=esAgua?0:Number(ref?.precio_venta_vial||0);
+  document.getElementById('aguaReferencia').textContent=esAgua?'Agua BAC: este componente inicia en cero para no incluir otra agua. Puedes definir todos los importes.':ref?'Precio de venta registrado del agua BAC 3 ml: '+formatMoneda(Number(ref.precio_venta_vial))+'. Editable; no descuenta existencias de agua.':'No hay precio registrado de agua BAC 3 ml. Captura el importe o déjalo en cero.';
+}
 function recalcular(){
-  const costo=num('costoUnitario'),precio=num('precioVial');
-  document.getElementById('margenVial').textContent = precio>0 ? ((precio-costo)/precio*100).toFixed(1)+'%' : '—';
+  try{
+    const d=desglosePrecio();
+    document.getElementById('precioVial').value=d.precio.toFixed(2);
+    document.getElementById('margenVial').textContent=formatMoneda(d.ganancia)+(d.precio>0?' · '+(d.ganancia/d.precio*100).toFixed(1)+'% de descuento':'');
+  }catch(e){document.getElementById('precioVial').value='';document.getElementById('margenVial').textContent=e.message;}
 }
 function convertirCompra(){
   const cajas=document.getElementById('cajasCompradas').value;
@@ -269,6 +296,7 @@ async function guardarLote(){
 
   const respaldo = {productos:structuredClone(productos),proveedores:structuredClone(proveedores),lotes:structuredClone(lotes)};
   try{
+    const precioDetalle=desglosePrecio();
     for(const id of ['concentracion','stockUnidades','costoUnitario','precioVial']){
       if(num(id)<0) throw new Error('Las cantidades, costos y precios no pueden ser negativos.');
     }
@@ -337,7 +365,8 @@ async function guardarLote(){
       fecha_adquisicion: document.getElementById('fechaAdquisicion').value,
       fecha_caducidad: document.getElementById('fechaCaducidad').value,
       costo_por_vial: Math.round(costoVial * 10000) / 10000,
-      precio_venta_vial: num('precioVial'),
+      precio_venta_vial: precioDetalle.precio,
+      desglose_precio_vial: precioDetalle,
       stock_viales: num('stockUnidades'),
       imagen_url: imagenUrl
     };

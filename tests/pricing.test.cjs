@@ -1,0 +1,18 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path');
+const html=fs.readFileSync(path.join(__dirname,'../nuevo-lote/index.html'),'utf8');
+const elements=new Map();
+const el=id=>{if(!elements.has(id))elements.set(id,{value:'0',textContent:'',classList:{add(){},remove(){}},addEventListener(){}});return elements.get(id)};
+const ctx=vm.createContext({document:{getElementById:el},localStorage:{getItem:()=>null},console});
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../js/datos.js'),'utf8'),ctx);
+vm.runInContext([...html.matchAll(/<script(?![^>]*src=)[^>]*>([\s\S]*?)<\/script>/g)][0][1],ctx);
+['costoUnitario','envioVial','comisionVial','aguaVial','gananciaVial'].forEach((id,i)=>el(id).value=String([120,15,100,250,500][i]));
+assert.equal(vm.runInContext('desglosePrecio().precio',ctx),985);
+vm.runInContext('recalcular()',ctx);assert.equal(el('precioVial').value,'985.00');
+el('envioVial').value='-1';assert.throws(()=>vm.runInContext('desglosePrecio()',ctx));el('envioVial').value='0';
+el('gananciaVial').value='Infinity';assert.throws(()=>vm.runInContext('desglosePrecio()',ctx));el('gananciaVial').value='0';
+vm.runInContext("lotes=[{id:'l1',producto_nombre:'Bac Water 3ml',precio_venta_vial:250,fecha_adquisicion:'2026-09-01'}];proponerAgua('BPC-157')",ctx);assert.equal(el('aguaVial').value,250);
+vm.runInContext("proponerAgua('Bac Water 3ml')",ctx);assert.equal(el('aguaVial').value,0);
+for(const id of ['envioVial','comisionVial','aguaVial','gananciaVial'])el(id).value='0';
+assert.equal(vm.runInContext('desglosePrecio().precio',ctx),120);
+el('costoUnitario').value='0.1';el('envioVial').value='0.2';assert.equal(vm.runInContext('desglosePrecio().precio',ctx),0.3);
+console.log('8 comprobaciones de precio superadas; sin escrituras en inventario.');
