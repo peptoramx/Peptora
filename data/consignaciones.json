@@ -231,7 +231,7 @@
     "lote_codigo": "L200926",
     "tipo": "vial",
     "cantidad_entregada": 10,
-    "cantidad_pendiente": 10,
+    "cantidad_pendiente": 9,
     "fecha_entrega": "2026-09-28T01:04:51.422Z"
   },
   {
@@ -296,7 +296,7 @@
     "lote_codigo": "L160926",
     "tipo": "vial",
     "cantidad_entregada": 42,
-    "cantidad_pendiente": 42,
+    "cantidad_pendiente": 41,
     "fecha_entrega": "2026-09-28T01:08:10.272Z"
   },
   {

@@ -229,5 +229,41 @@
     "grupo_id": "venta_grp_1791309370656",
     "vendedor_id": "vend_dulce-katawra",
     "vendedor_nombre": "Dulce Katawra"
+  },
+  {
+    "id": "venta_1791425998297_0",
+    "lote_id": "lote_1789934695518",
+    "producto_nombre": "Terzipatida",
+    "fecha": "2026-10-08T02:19:58.297Z",
+    "tipo_venta": "vial",
+    "cantidad": 1,
+    "precio_vendido": 1980,
+    "precio_lista": 2200,
+    "con_descuento": true,
+    "descuento_pct": 10,
+    "cortesia": false,
+    "origen": "consignacion",
+    "consignacion_id": "consig_1790557491422",
+    "grupo_id": "venta_grp_1791425998297",
+    "vendedor_id": "vend_dulce-katawra",
+    "vendedor_nombre": "Dulce Katawra"
+  },
+  {
+    "id": "venta_1791425998298_1",
+    "lote_id": "lote_007",
+    "producto_nombre": "Bac Water 3ml",
+    "fecha": "2026-10-08T02:19:58.298Z",
+    "tipo_venta": "vial",
+    "cantidad": 1,
+    "precio_vendido": 0,
+    "precio_lista": 250,
+    "con_descuento": true,
+    "descuento_pct": 100,
+    "cortesia": true,
+    "origen": "consignacion",
+    "consignacion_id": "consig_1790557690272",
+    "grupo_id": "venta_grp_1791425998297",
+    "vendedor_id": "vend_dulce-katawra",
+    "vendedor_nombre": "Dulce Katawra"
   }
 ]
