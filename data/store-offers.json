@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "currency": "MXN",
-  "updatedAt": "2026-10-17T23:25:10.950Z",
+  "updatedAt": "2026-10-17T23:25:33.511Z",
   "offers": {
     "retatrutide-2": {
       "price": 3200,
@@ -16,7 +16,7 @@
       "available": true
     },
     "semax-1": {
-      "price": 950,
+      "price": 1200,
       "available": true
     },
     "ghk-cu-1": {
