@@ -209,8 +209,8 @@
     "fecha_caducidad": "2028-09-01",
     "descuento_pct": 0,
     "costo_por_vial": 86,
-    "precio_venta_vial": 1400,
-    "stock_viales": 6,
+    "precio_venta_vial": 1450,
+    "stock_viales": 16,
     "imagen_url": "",
     "viales_por_caja": 10,
     "stock_cajas": 0

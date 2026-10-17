@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "currency": "MXN",
-  "updatedAt": "2026-10-17T23:26:47.758Z",
+  "updatedAt": "2026-10-17T23:27:36.612Z",
   "offers": {
     "retatrutide-2": {
       "price": 3200,
@@ -40,7 +40,7 @@
       "available": true
     },
     "nad-plus-1": {
-      "price": 1400,
+      "price": 1450,
       "available": true
     },
     "bac-water-10ml-1": {
