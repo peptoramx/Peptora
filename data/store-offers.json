@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "currency": "MXN",
-  "updatedAt": "2026-10-17T23:22:26.802Z",
+  "updatedAt": "2026-10-17T23:23:09.190Z",
   "offers": {
     "retatrutide-2": {
       "price": null,
       "available": true
     },
     "tirzepatide-2": {
-      "price": null,
+      "price": 2610,
       "available": true
     },
     "klow-1": {
@@ -56,7 +56,7 @@
       "available": true
     },
     "tirzepatide-1": {
-      "price": null,
+      "price": 2200,
       "available": true
     },
     "bpc-157-1": {
