@@ -83,5 +83,10 @@
     "id": "prod_dsip",
     "nombre": "DSIP",
     "categoria": "PEPTIDO"
+  },
+  {
+    "id": "prod_glutathion",
+    "nombre": "GLUTATHION",
+    "categoria": "PEPTIDO"
   }
 ]

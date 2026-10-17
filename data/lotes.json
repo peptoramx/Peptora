@@ -458,5 +458,28 @@
     },
     "stock_viales": 10,
     "imagen_url": ""
+  },
+  {
+    "id": "lote_1792280025296",
+    "producto_id": "prod_glutathion",
+    "producto_nombre": "GLUTATHION",
+    "proveedor_id": "prov_bodega-mx-camila",
+    "proveedor_nombre": "Camila",
+    "concentracion_mg": 600,
+    "lote": "PEP-GLUTATHION",
+    "fecha_adquisicion": "2026-09-01",
+    "fecha_caducidad": "2028-10-17",
+    "costo_por_vial": 190,
+    "precio_venta_vial": 1590,
+    "desglose_precio_vial": {
+      "costo": 190,
+      "envio": 50,
+      "comision": 200,
+      "agua_bac_3ml": 50,
+      "ganancia": 1100,
+      "precio": 1590
+    },
+    "stock_viales": 10,
+    "imagen_url": ""
   }
 ]
