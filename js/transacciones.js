@@ -18,13 +18,17 @@ async function ghGuardarAtomico(cambios, mensaje, token, shaCache){
   if(tree.truncated) throw new Error('No se pudo comprobar el inventario completo.');
   // Derive the public storefront feed from the same lot snapshot/commit.
   if(Object.hasOwn(cambios,'data/lotes.json')){
-    if(!window.PeptoraStoreFeed){
-      const source=await fetch('/js/store-feed.js?v=20261017',{cache:'no-store'});
+    if(window.PeptoraStoreFeed?.version!==2){
+      const source=await fetch('/js/store-feed.js?v=20261017-2',{cache:'no-store'});
       if(!source.ok)throw new Error('No se pudo cargar la conexión de tienda. Ningún cambio fue guardado.');
       // Load our own static script without evaluating fetched text.
-      await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='/js/store-feed.js?v=20261017';script.onload=resolve;script.onerror=reject;document.head.append(script);});
+      await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='/js/store-feed.js?v=20261017-2';script.onload=resolve;script.onerror=reject;document.head.append(script);});
     }
-    cambios={...cambios,'data/store-offers.json':window.PeptoraStoreFeed.project(cambios['data/lotes.json'])};
+    const decodeBlob=async path=>{const entry=tree.tree.find(e=>e.path===path);if(!entry)return null;const blob=await request('/git/blobs/'+entry.sha);return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(blob.content.replace(/\s/g,'')),c=>c.charCodeAt(0))));};
+    const [previousLots,previousState]=await Promise.all([decodeBlob('data/lotes.json'),decodeBlob('data/store-sync-state.json')]);
+    const state=window.PeptoraStoreFeed.nextPriceState(cambios['data/lotes.json'],previousLots||[],previousState||{});
+    cambios={...cambios,'data/store-sync-state.json':state,'data/store-offers.json':window.PeptoraStoreFeed.project(cambios['data/lotes.json'],undefined,state)};
+    shaCache['data/store-sync-state.json']=tree.tree.find(e=>e.path==='data/store-sync-state.json')?.sha||null;
     shaCache['data/store-offers.json']=tree.tree.find(e=>e.path==='data/store-offers.json')?.sha||null;
   }
   for(const path of Object.keys(cambios)){

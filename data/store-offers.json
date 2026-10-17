@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "currency": "MXN",
-  "updatedAt": "2026-10-17T23:42:16.492Z",
+  "updatedAt": "2026-10-17T23:51:18.282Z",
   "offers": {
     "retatrutide-2": {
       "price": 3200,
@@ -20,7 +20,7 @@
       "available": true
     },
     "ghk-cu-1": {
-      "price": 1150,
+      "price": 1200,
       "available": true
     },
     "bac-water-3ml-1": {
@@ -28,7 +28,11 @@
       "available": true
     },
     "mots-c-1": {
-      "price": 1550,
+      "price": 1650,
+      "available": true
+    },
+    "cjc-1295-no-dac-1": {
+      "price": 1200,
       "available": true
     },
     "ipamorelin-1": {
@@ -47,8 +51,16 @@
       "price": 500,
       "available": true
     },
+    "tesamorelin-ipamorelin-1": {
+      "price": 1950,
+      "available": true
+    },
     "selank-1": {
       "price": 1200,
+      "available": true
+    },
+    "wolverine-1": {
+      "price": 1700,
       "available": true
     },
     "retatrutide-1": {
@@ -61,6 +73,22 @@
     },
     "bpc-157-1": {
       "price": 1850,
+      "available": true
+    },
+    "cjc-ipamorelin-1": {
+      "price": 1550,
+      "available": false
+    },
+    "dsip-1": {
+      "price": 1715,
+      "available": true
+    },
+    "glutathione-1": {
+      "price": 1590,
+      "available": true
+    },
+    "ss-31-1": {
+      "price": 1460,
       "available": true
     }
   }

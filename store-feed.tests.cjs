@@ -5,11 +5,17 @@ assert.deepEqual(p.offers['retatrutide-2'],{price:2200,available:true});
 assert.ok(!JSON.stringify(p).includes('PRIVATE'));assert.ok(!JSON.stringify(p).includes('costo_por_vial'));
 assert.equal(project([fixture({producto_id:'prod_ipamoreline',concentracion_mg:100})]).offers['ipamorelin-1'],undefined);
 assert.equal(project([fixture({producto_id:'prod_ipamoreline',concentracion_mg:10})]).offers['ipamorelin-1'].available,true);
-assert.equal(project([fixture({producto_id:'prod_cjc-1295',concentracion_mg:5})]).offers['cjc-1295-no-dac-1'],undefined);
+assert.equal(project([fixture({producto_id:'prod_cjc-1295',concentracion_mg:5})]).offers['cjc-1295-no-dac-1'].available,true);
 assert.equal(project([fixture({stock_viales:0})]).offers['retatrutide-2'].available,false);
 assert.equal(project([fixture({stock_viales:2,stock_cajas:1,viales_por_caja:10})]).offers['retatrutide-2'].available,true);
 assert.equal(project([fixture({precio_venta_vial:0})]).offers['retatrutide-2'].price,null);
 console.log('Inventory feed: price selection, aggregation, expiry, units, exact presentation and privacy checks passed.');
 assert.ok(!JSON.stringify(p).includes('"stock"'));
 assert.ok(!JSON.stringify(p).includes('stock_viales'));
+const a=fixture({id:'edited',precio_venta_vial:1200}),b=fixture({id:'old',precio_venta_vial:1150});
+assert.equal(project([a,b],undefined,{priceChangedAt:{edited:'2026-10-17T23:00:00Z'}}).offers['retatrutide-2'].price,1200);
+const {nextPriceState}=require('./js/store-feed.js');
+const state=nextPriceState([{...a,stock_viales:1}],[a],{priceChangedAt:{edited:'old-time'}},'new-time');assert.equal(state.priceChangedAt.edited,'old-time');
+assert.equal(nextPriceState([{...a,precio_venta_vial:1300}],[a],state,'new-time').priceChangedAt.edited,'new-time');
+console.log('Latest price edit wins; stock-only changes do not change price precedence.');
 
