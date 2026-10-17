@@ -11,9 +11,19 @@
     "fecha_caducidad": "2028-09-01",
     "descuento_pct": 0,
     "costo_por_vial": 245,
-    "precio_venta_vial": 2100,
+    "precio_venta_vial": 1445,
     "stock_viales": 5,
-    "imagen_url": ""
+    "imagen_url": "",
+    "viales_por_caja": 10,
+    "stock_cajas": 0,
+    "desglose_precio_vial": {
+      "costo": 245,
+      "envio": 50,
+      "comision": 100,
+      "agua_bac_3ml": 50,
+      "ganancia": 1000,
+      "precio": 1445
+    }
   },
   {
     "id": "lote_002",
@@ -29,7 +39,9 @@
     "costo_por_vial": 178,
     "precio_venta_vial": 2100,
     "stock_viales": 9,
-    "imagen_url": "assets/productos/lote_002.png"
+    "imagen_url": "assets/productos/lote_002.png",
+    "viales_por_caja": 10,
+    "stock_cajas": 0
   },
   {
     "id": "lote_003",
@@ -45,7 +57,9 @@
     "costo_por_vial": 243.2,
     "precio_venta_vial": 1850,
     "stock_viales": 1,
-    "imagen_url": ""
+    "imagen_url": "",
+    "viales_por_caja": 10,
+    "stock_cajas": 0
   },
   {
     "id": "lote_004",
@@ -61,7 +75,9 @@
     "costo_por_vial": 566.6,
     "precio_venta_vial": 3500,
     "stock_viales": 9,
-    "imagen_url": ""
+    "imagen_url": "",
+    "viales_por_caja": 10,
+    "stock_cajas": 0
   },
   {
     "id": "lote_005",
@@ -77,7 +93,9 @@
     "costo_por_vial": 144.6,
     "precio_venta_vial": 950,
     "stock_viales": 5,
-    "imagen_url": ""
+    "imagen_url": "",
+    "viales_por_caja": 10,
+    "stock_cajas": 0
   },
   {
     "id": "lote_006",
@@ -93,7 +111,9 @@
     "costo_por_vial": 82.3,
     "precio_venta_vial": 1150,
     "stock_viales": 8,
-    "imagen_url": ""
+    "imagen_url": "",
+    "viales_por_caja": 10,
+    "stock_cajas": 0
   },
   {
     "id": "lote_007",
@@ -109,7 +129,9 @@
     "costo_por_vial": 14.6,
     "precio_venta_vial": 250,
     "stock_viales": 50,
-    "imagen_url": ""
+    "imagen_url": "",
+    "viales_por_caja": 10,
+    "stock_cajas": 0
   },
   {
     "id": "lote_008",
@@ -125,7 +147,9 @@
     "costo_por_vial": 145,
     "precio_venta_vial": 1200,
     "stock_viales": 10,
-    "imagen_url": ""
+    "imagen_url": "",
+    "viales_por_caja": 10,
+    "stock_cajas": 0
   },
   {
     "id": "lote_009",
@@ -141,7 +165,9 @@
     "costo_por_vial": 198,
     "precio_venta_vial": 1200,
     "stock_viales": 10,
-    "imagen_url": ""
+    "imagen_url": "",
+    "viales_por_caja": 10,
+    "stock_cajas": 0
   },
   {
     "id": "lote_010",
@@ -157,7 +183,9 @@
     "costo_por_vial": 198,
     "precio_venta_vial": 1200,
     "stock_viales": 10,
-    "imagen_url": ""
+    "imagen_url": "",
+    "viales_por_caja": 10,
+    "stock_cajas": 0
   },
   {
     "id": "lote_011",
@@ -173,7 +201,9 @@
     "costo_por_vial": 94,
     "precio_venta_vial": 1750,
     "stock_viales": 10,
-    "imagen_url": ""
+    "imagen_url": "",
+    "viales_por_caja": 10,
+    "stock_cajas": 0
   },
   {
     "id": "lote_012",
@@ -189,7 +219,9 @@
     "costo_por_vial": 86,
     "precio_venta_vial": 1400,
     "stock_viales": 6,
-    "imagen_url": ""
+    "imagen_url": "",
+    "viales_por_caja": 10,
+    "stock_cajas": 0
   },
   {
     "id": "lote_013",
@@ -205,7 +237,9 @@
     "costo_por_vial": 32,
     "precio_venta_vial": 390,
     "stock_viales": 50,
-    "imagen_url": ""
+    "imagen_url": "",
+    "viales_por_caja": 10,
+    "stock_cajas": 0
   },
   {
     "id": "lote_014",
@@ -221,7 +255,9 @@
     "costo_por_vial": 219,
     "precio_venta_vial": 1950,
     "stock_viales": 10,
-    "imagen_url": ""
+    "imagen_url": "",
+    "viales_por_caja": 10,
+    "stock_cajas": 0
   },
   {
     "id": "lote_015",
@@ -237,7 +273,9 @@
     "costo_por_vial": 133,
     "precio_venta_vial": 980,
     "stock_viales": 10,
-    "imagen_url": ""
+    "imagen_url": "",
+    "viales_por_caja": 10,
+    "stock_cajas": 0
   },
   {
     "id": "lote_016",
@@ -253,7 +291,9 @@
     "costo_por_vial": 198,
     "precio_venta_vial": 1700,
     "stock_viales": 14,
-    "imagen_url": ""
+    "imagen_url": "",
+    "viales_por_caja": 10,
+    "stock_cajas": 0
   },
   {
     "id": "lote_1789934559442",
@@ -269,7 +309,9 @@
     "costo_por_vial": 230,
     "precio_venta_vial": 2200,
     "stock_viales": 10,
-    "imagen_url": ""
+    "imagen_url": "",
+    "viales_por_caja": 10,
+    "stock_cajas": 0
   },
   {
     "id": "lote_1789934695518",
@@ -285,7 +327,9 @@
     "costo_por_vial": 210,
     "precio_venta_vial": 2200,
     "stock_viales": 10,
-    "imagen_url": ""
+    "imagen_url": "",
+    "viales_por_caja": 10,
+    "stock_cajas": 0
   },
   {
     "id": "lote_1789934770475",
@@ -301,7 +345,9 @@
     "costo_por_vial": 180,
     "precio_venta_vial": 1550,
     "stock_viales": 20,
-    "imagen_url": ""
+    "imagen_url": "",
+    "viales_por_caja": 10,
+    "stock_cajas": 0
   },
   {
     "id": "lote_1789934857467",
@@ -317,7 +363,9 @@
     "costo_por_vial": 100,
     "precio_venta_vial": 1150,
     "stock_viales": 6,
-    "imagen_url": ""
+    "imagen_url": "",
+    "viales_por_caja": 10,
+    "stock_cajas": 0
   },
   {
     "id": "lote_1789934936615",
@@ -333,7 +381,9 @@
     "costo_por_vial": 196,
     "precio_venta_vial": 1500,
     "stock_viales": 10,
-    "imagen_url": ""
+    "imagen_url": "",
+    "viales_por_caja": 10,
+    "stock_cajas": 0
   },
   {
     "id": "lote_1789935046699",
@@ -349,7 +399,9 @@
     "costo_por_vial": 198,
     "precio_venta_vial": 1850,
     "stock_viales": 6,
-    "imagen_url": ""
+    "imagen_url": "",
+    "viales_por_caja": 10,
+    "stock_cajas": 0
   },
   {
     "id": "lote_1790557827980",
@@ -365,6 +417,8 @@
     "costo_por_vial": 28,
     "precio_venta_vial": 250,
     "stock_viales": 100,
-    "imagen_url": ""
+    "imagen_url": "",
+    "viales_por_caja": 10,
+    "stock_cajas": 0
   }
 ]
