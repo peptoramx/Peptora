@@ -16,6 +16,17 @@ async function ghGuardarAtomico(cambios, mensaje, token, shaCache){
   const commit = await request('/git/commits/'+ref.object.sha);
   const tree = await request('/git/trees/'+commit.tree.sha+'?recursive=1');
   if(tree.truncated) throw new Error('No se pudo comprobar el inventario completo.');
+  // Derive the public storefront feed from the same lot snapshot/commit.
+  if(Object.hasOwn(cambios,'data/lotes.json')){
+    if(!window.PeptoraStoreFeed){
+      const source=await fetch('/js/store-feed.js?v=20261017',{cache:'no-store'});
+      if(!source.ok)throw new Error('No se pudo cargar la conexión de tienda. Ningún cambio fue guardado.');
+      // Load our own static script without evaluating fetched text.
+      await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='/js/store-feed.js?v=20261017';script.onload=resolve;script.onerror=reject;document.head.append(script);});
+    }
+    cambios={...cambios,'data/store-offers.json':window.PeptoraStoreFeed.project(cambios['data/lotes.json'])};
+    shaCache['data/store-offers.json']=tree.tree.find(e=>e.path==='data/store-offers.json')?.sha||null;
+  }
   for(const path of Object.keys(cambios)){
     const existing = tree.tree.find(entry=>entry.path===path);
     if((existing?.sha || null) !== (shaCache[path] || null)) throw new Error('Hay cambios más recientes en '+path+'. Recarga antes de guardar.');
@@ -33,3 +44,4 @@ async function ghGuardarAtomico(cambios, mensaje, token, shaCache){
   for(const blob of blobs) shaCache[blob.path]=blob.sha;
   return nuevoCommit.sha;
 }
+

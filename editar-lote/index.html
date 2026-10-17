@@ -38,6 +38,7 @@
 </div>
 
 <script src="../js/datos.js?v=20260930"></script>
+<script src="../js/transacciones.js?v=20261017"></script>
 <script>
 const REPO = 'peptoramx/Peptora';
 const API = `https://api.github.com/repos/${REPO}/contents`;
@@ -64,6 +65,7 @@ async function ghGetRaw(path){
   return path==='data/lotes.json' ? datos.map(normalizarLote) : datos;
 }
 async function ghPut(path, dataArr, msg){
+  if(path==='data/lotes.json')return ghGuardarAtomico({[path]:dataArr},msg,getToken(),shaCache);
   const content = btoa(unescape(encodeURIComponent(JSON.stringify(dataArr, null, 2))));
   const body = { message: msg, content, branch:'main' };
   if(shaCache[path]) body.sha = shaCache[path];
@@ -235,3 +237,4 @@ if(ensureToken()) init();
 <script src="../js/ui.js?v=20260930"></script>
 </body>
 </html>
+

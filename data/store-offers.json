@@ -1,0 +1,67 @@
+{
+  "schema": 1,
+  "currency": "MXN",
+  "updatedAt": "2026-10-17T20:10:38.360Z",
+  "offers": {
+    "retatrutide-2": {
+      "price": 2100,
+      "stock": 14
+    },
+    "tirzepatide-2": {
+      "price": 1850,
+      "stock": 1
+    },
+    "klow-1": {
+      "price": 3500,
+      "stock": 9
+    },
+    "semax-1": {
+      "price": 950,
+      "stock": 5
+    },
+    "ghk-cu-1": {
+      "price": 1150,
+      "stock": 14
+    },
+    "bac-water-3ml-1": {
+      "price": 250,
+      "stock": 150
+    },
+    "mots-c-1": {
+      "price": 1550,
+      "stock": 30
+    },
+    "ipamorelin-1": {
+      "price": 1200,
+      "stock": 10
+    },
+    "ghk-cu-2": {
+      "price": 1750,
+      "stock": 10
+    },
+    "nad-plus-1": {
+      "price": 1400,
+      "stock": 6
+    },
+    "bac-water-10ml-1": {
+      "price": 390,
+      "stock": 50
+    },
+    "selank-1": {
+      "price": 980,
+      "stock": 10
+    },
+    "retatrutide-1": {
+      "price": 2200,
+      "stock": 10
+    },
+    "tirzepatide-1": {
+      "price": 2200,
+      "stock": 10
+    },
+    "bpc-157-1": {
+      "price": 1850,
+      "stock": 6
+    }
+  }
+}
