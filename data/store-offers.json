@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "currency": "MXN",
-  "updatedAt": "2026-10-17T23:21:28.857Z",
+  "updatedAt": "2026-10-17T23:21:55.300Z",
   "offers": {
     "retatrutide-2": {
       "price": null,
@@ -44,7 +44,7 @@
       "available": true
     },
     "bac-water-10ml-1": {
-      "price": 390,
+      "price": 500,
       "available": true
     },
     "selank-1": {
