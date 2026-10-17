@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "currency": "MXN",
-  "updatedAt": "2026-10-17T23:20:33.673Z",
+  "updatedAt": "2026-10-17T23:20:54.408Z",
   "offers": {
     "retatrutide-2": {
       "price": null,
@@ -48,7 +48,7 @@
       "available": true
     },
     "selank-1": {
-      "price": 980,
+      "price": 1200,
       "available": true
     },
     "retatrutide-1": {
