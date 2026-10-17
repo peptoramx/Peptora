@@ -13,6 +13,10 @@ function project(lots,today=new Date().toISOString().slice(0,10)){
   const stock=valid.reduce((n,l)=>{const units=Number(l.stock_viales||0)+Number(l.stock_cajas||0)*(Number(l.viales_por_caja)||10);return n+(Number.isSafeInteger(units)&&units>0?units:0);},0);
   offers[id]={price:latest?Number(latest.precio_venta_vial):null,available:stock>0};
  }
+ // Do not publish inverted strength pricing; the owner must correct inventory prices.
+ for(const [low,high] of [['retatrutide-1','retatrutide-2'],['tirzepatide-1','tirzepatide-2'],['ghk-cu-1','ghk-cu-2']]){
+  if(offers[low]?.price>0&&offers[high]?.price>0&&offers[high].price<offers[low].price){offers[low].price=null;offers[high].price=null;}
+ }
  return {schema:1,currency:'MXN',updatedAt:new Date().toISOString(),offers};
 }
 if(typeof module!=='undefined')module.exports={project};else root.PeptoraStoreFeed={project};
