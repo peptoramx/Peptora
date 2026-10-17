@@ -448,15 +448,15 @@
     "lote": "PEP-DSIP",
     "fecha_adquisicion": "2026-09-01",
     "fecha_caducidad": "2028-08-30",
-    "costo_por_vial": 186,
-    "precio_venta_vial": 1486,
+    "costo_por_vial": 314.9997,
+    "precio_venta_vial": 1715,
     "desglose_precio_vial": {
-      "costo": 186,
+      "costo": 314.9997,
       "envio": 50,
       "comision": 200,
       "agua_bac_3ml": 50,
-      "ganancia": 1000,
-      "precio": 1486
+      "ganancia": 1100,
+      "precio": 1715
     },
     "stock_viales": 10,
     "imagen_url": "",
@@ -509,7 +509,9 @@
       "precio": 1915.8
     },
     "stock_viales": 20,
-    "imagen_url": ""
+    "imagen_url": "",
+    "viales_por_caja": 10,
+    "stock_cajas": 0
   },
   {
     "id": "lote_1792280358658",
@@ -532,7 +534,9 @@
       "precio": 1900
     },
     "stock_viales": 20,
-    "imagen_url": ""
+    "imagen_url": "",
+    "viales_por_caja": 10,
+    "stock_cajas": 0
   },
   {
     "id": "lote_1792280467524",
@@ -555,6 +559,8 @@
       "precio": 1460
     },
     "stock_viales": 10,
-    "imagen_url": ""
+    "imagen_url": "",
+    "viales_por_caja": 10,
+    "stock_cajas": 0
   }
 ]
