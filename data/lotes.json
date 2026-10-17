@@ -11,19 +11,11 @@
     "fecha_caducidad": "2028-09-01",
     "descuento_pct": 0,
     "costo_por_vial": 245,
-    "precio_venta_vial": 1445,
+    "precio_venta_vial": 3200,
     "stock_viales": 5,
     "imagen_url": "",
     "viales_por_caja": 10,
-    "stock_cajas": 0,
-    "desglose_precio_vial": {
-      "costo": 245,
-      "envio": 50,
-      "comision": 100,
-      "agua_bac_3ml": 50,
-      "ganancia": 1000,
-      "precio": 1445
-    }
+    "stock_cajas": 0
   },
   {
     "id": "lote_002",
