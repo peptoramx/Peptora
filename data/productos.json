@@ -78,5 +78,10 @@
     "id": "prod_cjc-1295-no-dac-ipamorelin",
     "nombre": "CJC-1295 NO DAC+IPAMORELIN",
     "categoria": "PEPTIDO"
+  },
+  {
+    "id": "prod_dsip",
+    "nombre": "DSIP",
+    "categoria": "PEPTIDO"
   }
 ]
