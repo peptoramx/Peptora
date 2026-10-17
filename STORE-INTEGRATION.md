@@ -1,6 +1,6 @@
 # PEPTORA storefront integration
 
-`js/store-feed.js` projects `data/lotes.json` into `data/store-offers.json`, containing only retail MXN prices and unconsigned stock by exact storefront presentation. No costs, suppliers, commissions, customer records or credentials are exported. Initial correction authorized by owner: Ipamorelin lot_010 100 mg → 10 mg, price/units unchanged.
+`js/store-feed.js` projects `data/lotes.json` into `data/store-offers.json`, containing only retail MXN prices and a boolean availability by exact storefront presentation. Exact quantities stay out of the storefront feed. No costs, suppliers, commissions, customer records or credentials are exported. Initial correction authorized by owner: Ipamorelin lot_010 100 mg → 10 mg, price/units unchanged.
 
 Lot creation, lot editing/deletion, quick sales, cancellations, consignments and returns use `ghGuardarAtomico`: lot data and the public projection are written in **one commit** with optimistic concurrency and non-forced ref updates. A WhatsApp inquiry never decrements inventory; confirm sales using the existing inventory sales workflow. Direct manual GitHub edits of lot JSON bypass this application hook and require regenerating the projection; use the inventory UI for operational changes.
 

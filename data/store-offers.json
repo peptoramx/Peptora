@@ -1,67 +1,67 @@
 {
   "schema": 1,
   "currency": "MXN",
-  "updatedAt": "2026-10-17T20:10:38.360Z",
+  "updatedAt": "2026-10-17T20:17:48.251Z",
   "offers": {
     "retatrutide-2": {
       "price": 2100,
-      "stock": 14
+      "available": true
     },
     "tirzepatide-2": {
       "price": 1850,
-      "stock": 1
+      "available": true
     },
     "klow-1": {
       "price": 3500,
-      "stock": 9
+      "available": true
     },
     "semax-1": {
       "price": 950,
-      "stock": 5
+      "available": true
     },
     "ghk-cu-1": {
       "price": 1150,
-      "stock": 14
+      "available": true
     },
     "bac-water-3ml-1": {
       "price": 250,
-      "stock": 150
+      "available": true
     },
     "mots-c-1": {
       "price": 1550,
-      "stock": 30
+      "available": true
     },
     "ipamorelin-1": {
       "price": 1200,
-      "stock": 10
+      "available": true
     },
     "ghk-cu-2": {
       "price": 1750,
-      "stock": 10
+      "available": true
     },
     "nad-plus-1": {
       "price": 1400,
-      "stock": 6
+      "available": true
     },
     "bac-water-10ml-1": {
       "price": 390,
-      "stock": 50
+      "available": true
     },
     "selank-1": {
       "price": 980,
-      "stock": 10
+      "available": true
     },
     "retatrutide-1": {
       "price": 2200,
-      "stock": 10
+      "available": true
     },
     "tirzepatide-1": {
       "price": 2200,
-      "stock": 10
+      "available": true
     },
     "bpc-157-1": {
       "price": 1850,
-      "stock": 6
+      "available": true
     }
   }
 }

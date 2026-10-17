@@ -11,7 +11,7 @@ function project(lots,today=new Date().toISOString().slice(0,10)){
   const ordered=valid.map((l,index)=>({l,index})).sort((a,b)=>String(b.l.fecha_adquisicion||'').localeCompare(String(a.l.fecha_adquisicion||''))||b.index-a.index);
   const latest=ordered.find(({l})=>Number.isFinite(Number(l.precio_venta_vial))&&Number(l.precio_venta_vial)>0)?.l;
   const stock=valid.reduce((n,l)=>{const units=Number(l.stock_viales||0)+Number(l.stock_cajas||0)*(Number(l.viales_por_caja)||10);return n+(Number.isSafeInteger(units)&&units>0?units:0);},0);
-  offers[id]={price:latest?Number(latest.precio_venta_vial):null,stock};
+  offers[id]={price:latest?Number(latest.precio_venta_vial):null,available:stock>0};
  }
  return {schema:1,currency:'MXN',updatedAt:new Date().toISOString(),offers};
 }
