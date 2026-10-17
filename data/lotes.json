@@ -434,7 +434,9 @@
       "precio": 1550
     },
     "stock_viales": 0,
-    "imagen_url": ""
+    "imagen_url": "",
+    "viales_por_caja": 10,
+    "stock_cajas": 0
   },
   {
     "id": "lote_1792279946746",
@@ -442,7 +444,7 @@
     "producto_nombre": "DSIP",
     "proveedor_id": "prov_bodega-mx-camila",
     "proveedor_nombre": "Camila",
-    "concentracion_mg": 0,
+    "concentracion_mg": 10,
     "lote": "PEP-DSIP",
     "fecha_adquisicion": "2026-09-01",
     "fecha_caducidad": "2028-08-30",
@@ -457,7 +459,9 @@
       "precio": 1486
     },
     "stock_viales": 10,
-    "imagen_url": ""
+    "imagen_url": "",
+    "viales_por_caja": 10,
+    "stock_cajas": 0
   },
   {
     "id": "lote_1792280025296",
@@ -480,6 +484,8 @@
       "precio": 1590
     },
     "stock_viales": 10,
-    "imagen_url": ""
+    "imagen_url": "",
+    "viales_por_caja": 10,
+    "stock_cajas": 0
   }
 ]
