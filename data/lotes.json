@@ -84,7 +84,7 @@
     "descuento_pct": 0,
     "costo_por_vial": 144.6,
     "precio_venta_vial": 1200,
-    "stock_viales": 5,
+    "stock_viales": 15,
     "imagen_url": "",
     "viales_por_caja": 10,
     "stock_cajas": 0
