@@ -1,10 +1,10 @@
 {
   "schema": 1,
   "currency": "MXN",
-  "updatedAt": "2026-10-17T23:23:09.190Z",
+  "updatedAt": "2026-10-17T23:23:32.726Z",
   "offers": {
     "retatrutide-2": {
-      "price": null,
+      "price": 3200,
       "available": true
     },
     "tirzepatide-2": {
@@ -52,7 +52,7 @@
       "available": true
     },
     "retatrutide-1": {
-      "price": null,
+      "price": 2200,
       "available": true
     },
     "tirzepatide-1": {
