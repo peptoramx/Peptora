@@ -487,5 +487,28 @@
     "imagen_url": "",
     "viales_por_caja": 10,
     "stock_cajas": 0
+  },
+  {
+    "id": "lote_1792280266930",
+    "producto_id": "prod_retatrutida",
+    "producto_nombre": "Retatrutida",
+    "proveedor_id": "prov_bodega-mx-camila",
+    "proveedor_nombre": "Camila",
+    "concentracion_mg": 10,
+    "lote": "z51-z14",
+    "fecha_adquisicion": "2026-09-01",
+    "fecha_caducidad": "2028-10-17",
+    "costo_por_vial": 215.8,
+    "precio_venta_vial": 1915.8,
+    "desglose_precio_vial": {
+      "costo": 215.8,
+      "envio": 50,
+      "comision": 200,
+      "agua_bac_3ml": 50,
+      "ganancia": 1400,
+      "precio": 1915.8
+    },
+    "stock_viales": 20,
+    "imagen_url": ""
   }
 ]
