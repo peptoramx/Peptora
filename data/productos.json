@@ -73,5 +73,10 @@
     "id": "prod_bpc-157",
     "nombre": "BPC-157",
     "categoria": "Peptido"
+  },
+  {
+    "id": "prod_cjc-1295-no-dac-ipamorelin",
+    "nombre": "CJC-1295 NO DAC+IPAMORELIN",
+    "categoria": "PEPTIDO"
   }
 ]

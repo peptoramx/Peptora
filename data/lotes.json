@@ -412,5 +412,28 @@
     "imagen_url": "",
     "viales_por_caja": 10,
     "stock_cajas": 0
+  },
+  {
+    "id": "lote_1792279847495",
+    "producto_id": "prod_cjc-1295-no-dac-ipamorelin",
+    "producto_nombre": "CJC-1295 NO DAC+IPAMORELIN",
+    "proveedor_id": "prov_bodega-mx-camila",
+    "proveedor_nombre": "Camila",
+    "concentracion_mg": 0,
+    "lote": "PEP-CJC-1295-NO-DAC-IPAMORELIN",
+    "fecha_adquisicion": "2026-09-01",
+    "fecha_caducidad": "2028-09-12",
+    "costo_por_vial": 250,
+    "precio_venta_vial": 1550,
+    "desglose_precio_vial": {
+      "costo": 250,
+      "envio": 50,
+      "comision": 200,
+      "agua_bac_3ml": 50,
+      "ganancia": 1000,
+      "precio": 1550
+    },
+    "stock_viales": 0,
+    "imagen_url": ""
   }
 ]
