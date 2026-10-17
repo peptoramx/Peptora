@@ -533,5 +533,28 @@
     },
     "stock_viales": 20,
     "imagen_url": ""
+  },
+  {
+    "id": "lote_1792280467524",
+    "producto_id": "prod_ss-31",
+    "producto_nombre": "SS-31",
+    "proveedor_id": "prov_bodega-mx-camila",
+    "proveedor_nombre": "Camila",
+    "concentracion_mg": 5,
+    "lote": "PEP-SS-31",
+    "fecha_adquisicion": "2026-09-01",
+    "fecha_caducidad": "2028-10-17",
+    "costo_por_vial": 147.5,
+    "precio_venta_vial": 1460,
+    "desglose_precio_vial": {
+      "costo": 147.5,
+      "envio": 50,
+      "comision": 200,
+      "agua_bac_3ml": 50,
+      "ganancia": 1012.5,
+      "precio": 1460
+    },
+    "stock_viales": 10,
+    "imagen_url": ""
   }
 ]

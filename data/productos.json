@@ -88,5 +88,10 @@
     "id": "prod_glutathion",
     "nombre": "GLUTATHION",
     "categoria": "PEPTIDO"
+  },
+  {
+    "id": "prod_ss-31",
+    "nombre": "SS-31",
+    "categoria": "PEPTIDOS"
   }
 ]
