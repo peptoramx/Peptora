@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "currency": "MXN",
-  "updatedAt": "2026-10-17T23:27:36.612Z",
+  "updatedAt": "2026-10-17T23:28:07.405Z",
   "offers": {
     "retatrutide-2": {
       "price": 3200,
@@ -24,7 +24,7 @@
       "available": true
     },
     "bac-water-3ml-1": {
-      "price": 250,
+      "price": 350,
       "available": true
     },
     "mots-c-1": {
