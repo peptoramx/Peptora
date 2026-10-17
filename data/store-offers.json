@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "currency": "MXN",
-  "updatedAt": "2026-10-17T23:21:55.300Z",
+  "updatedAt": "2026-10-17T23:22:14.253Z",
   "offers": {
     "retatrutide-2": {
       "price": null,
@@ -32,7 +32,7 @@
       "available": true
     },
     "ipamorelin-1": {
-      "price": 1200,
+      "price": 1500,
       "available": true
     },
     "ghk-cu-2": {
