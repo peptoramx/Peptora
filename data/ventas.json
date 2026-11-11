@@ -337,5 +337,23 @@
     "grupo_id": "venta_grp_1794361684683",
     "vendedor_id": "vend_dulce-katawra",
     "vendedor_nombre": "Dulce Katawra"
+  },
+  {
+    "id": "venta_1794361809520_0",
+    "lote_id": "lote_1789934559442",
+    "producto_nombre": "Retatrutida",
+    "fecha": "2026-11-11T01:50:09.520Z",
+    "tipo_venta": "vial",
+    "cantidad": 1,
+    "precio_vendido": 1202.08,
+    "precio_lista": 2200,
+    "con_descuento": true,
+    "descuento_pct": 45.36,
+    "cortesia": false,
+    "origen": "consignacion",
+    "consignacion_id": "consig_1790557504825",
+    "grupo_id": "venta_grp_1794361809520",
+    "vendedor_id": "vend_dulce-katawra",
+    "vendedor_nombre": "Dulce Katawra"
   }
 ]
