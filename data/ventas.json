@@ -319,5 +319,23 @@
     "grupo_id": "venta_grp_1794359861228",
     "vendedor_id": "vend_dulce-katawra",
     "vendedor_nombre": "Dulce Katawra"
+  },
+  {
+    "id": "venta_1794361684683_0",
+    "lote_id": "lote_003",
+    "producto_nombre": "Terzipatida",
+    "fecha": "2026-11-11T01:48:04.683Z",
+    "tipo_venta": "vial",
+    "cantidad": 1,
+    "precio_vendido": 2400.62,
+    "precio_lista": 2900,
+    "con_descuento": true,
+    "descuento_pct": 17.22,
+    "cortesia": false,
+    "origen": "consignacion",
+    "consignacion_id": "consig_1790557594629",
+    "grupo_id": "venta_grp_1794361684683",
+    "vendedor_id": "vend_dulce-katawra",
+    "vendedor_nombre": "Dulce Katawra"
   }
 ]
